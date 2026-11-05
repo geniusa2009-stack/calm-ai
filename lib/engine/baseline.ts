@@ -44,9 +44,13 @@ export function computeBaseline(days: Day[], asOf: string, opts: { window?: numb
     const age = daysBetween(d.date, asOf);
     return age >= exclude && age < window + exclude;
   });
-  // Early on there isn't enough history to exclude recent days — use what exists before asOf.
-  if (pool.length < 7) pool = days.filter((d) => daysBetween(d.date, asOf) >= 1 && daysBetween(d.date, asOf) < window + exclude);
-  if (pool.length < 3) pool = days.filter((d) => daysBetween(d.date, asOf) >= 0);
+  // Early on there isn't enough history to hold out the recent days. Fall back to
+  // everything *before* asOf — but never asOf itself, so the day being judged can't
+  // define its own "usual". With almost no history, the population prior carries it.
+  if (pool.length < 7) {
+    const prior = days.filter((d) => { const age = daysBetween(d.date, asOf); return age >= 1 && age < window + exclude; });
+    if (prior.length > pool.length) pool = prior;
+  }
 
   const out = {} as Record<BMetric, MetricBaseline>;
   for (const m of BMETRICS) {

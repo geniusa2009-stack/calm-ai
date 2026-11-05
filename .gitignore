@@ -4,3 +4,8 @@ data/*.db*
 .env*.local
 next-env.d.ts
 *.tsbuildinfo
+
+# env files (keep the template)
+.env
+.env.*
+!.env.example

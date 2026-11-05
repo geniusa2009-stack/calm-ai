@@ -1,7 +1,7 @@
 import type { PulseState } from "@/lib/engine/pulse";
 
 export const STATE_COLOR: Record<PulseState, string> = {
-  learning: "var(--ink-3)", bright: "var(--bright)", steady: "var(--calm)", stretched: "var(--stretch)",
+  learning: "var(--ink-3)", "no-recent": "var(--ink-3)", bright: "var(--bright)", steady: "var(--calm)", stretched: "var(--stretch)",
   strained: "var(--strain)", "running-low": "var(--low)", recovering: "var(--calm)",
 };
 
@@ -24,10 +24,10 @@ export function PulseRing({ score, state, size = 200 }: { score: number; state: 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Calm Pulse ${score} of 100; 60 is your usual`}>
       <path d={arc(start, start + sweep)} stroke="var(--surface-2)" strokeWidth={14} fill="none" strokeLinecap="round" />
-      {state !== "learning" && <path d={arc(start, end)} stroke={STATE_COLOR[state]} strokeWidth={14} fill="none" strokeLinecap="round" />}
+      {state !== "learning" && state !== "no-recent" && <path d={arc(start, end)} stroke={STATE_COLOR[state]} strokeWidth={14} fill="none" strokeLinecap="round" />}
       <line x1={ux1} y1={uy1} x2={ux2} y2={uy2} stroke="var(--ink-3)" strokeWidth={2} />
-      <text x={c} y={c + 4} textAnchor="middle" fontSize={size * 0.22} fontWeight={700} fill="var(--ink)">{state === "learning" ? "·" : score}</text>
-      <text x={c} y={c + size * 0.17} textAnchor="middle" fontSize={11} fill="var(--ink-3)">{state === "learning" ? "learning" : "tick = your usual"}</text>
+      <text x={c} y={c + 4} textAnchor="middle" fontSize={size * 0.22} fontWeight={700} fill="var(--ink)">{state === "learning" || state === "no-recent" ? "·" : score}</text>
+      <text x={c} y={c + size * 0.17} textAnchor="middle" fontSize={11} fill="var(--ink-3)">{state === "learning" ? "learning" : state === "no-recent" ? "no recent data" : "tick = your usual"}</text>
     </svg>
   );
 }

@@ -12,6 +12,10 @@ export interface Episode {
   days: number; // time from start until back within usual
   supportUsed: number;
   recoveryTags: string[];
+  /** Longest stretch without a check-in inside the episode, in days. */
+  maxGap: number;
+  /** True when gaps make the duration unreliable; excluded from "typical". */
+  uncertain: boolean;
 }
 
 export interface RecoveryProfile {
@@ -22,16 +26,23 @@ export interface RecoveryProfile {
   text: string;
 }
 
-const START = 1.2, END = 0.5;
+const START = 1.2, END = 0.5, SEVERE = 2.2;
+/** An episode with a hole longer than this can't be timed honestly. */
+export const MAX_GAP_DAYS = 3;
 
 export function recoveryProfile(days: Day[], sessions: SupportSession[]): RecoveryProfile {
   const series = strainSeries(days).filter((s) => s.stage !== "learning");
   const episodes: Episode[] = [];
   let cur: { start: string; peak: number } | null = null;
 
-  for (const s of series) {
-    if (!cur && s.strain >= START) cur = { start: s.date, peak: s.strain };
-    else if (cur) {
+  // An episode needs two consecutive check-ins above START (or one severe day);
+  // a single rough day is ordinary variation, not a "harder stretch".
+  for (let i = 0; i < series.length; i++) {
+    const s = series[i];
+    const next = series[i + 1];
+    if (!cur) {
+      if (s.strain >= SEVERE || (s.strain >= START && next && next.strain >= START)) cur = { start: s.date, peak: s.strain };
+    } else {
       cur.peak = Math.max(cur.peak, s.strain);
       if (s.strain < END) {
         episodes.push(finish(cur, s.date));
@@ -39,20 +50,24 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[]): Recove
       }
     }
   }
-  if (cur) episodes.push({ ...finish(cur, null) });
+  if (cur) episodes.push(finish(cur, null));
 
   function finish(c: { start: string; peak: number }, end: string | null): Episode {
     const until = end ?? series.at(-1)!.date;
     const used = sessions.filter((x) => x.ts.slice(0, 10) >= c.start && x.ts.slice(0, 10) <= until).length;
     // tags seen in the 3 days leading into the return to baseline
     const tagDays = end ? days.filter((d) => { const a = daysBetween(d.date, end); return a >= 0 && a <= 2; }) : [];
+    const inside = series.filter((x) => x.date >= c.start && x.date <= until).map((x) => x.date);
+    let maxGap = 0;
+    for (let i = 1; i < inside.length; i++) maxGap = Math.max(maxGap, daysBetween(inside[i - 1], inside[i]) - 1);
     return {
       start: c.start, end, peak: round(c.peak, 2), days: daysBetween(c.start, until),
       supportUsed: used, recoveryTags: [...new Set(tagDays.flatMap((d) => d.tags))],
+      maxGap, uncertain: maxGap > MAX_GAP_DAYS,
     };
   }
 
-  const done = episodes.filter((e) => e.end);
+  const done = episodes.filter((e) => e.end && !e.uncertain);
   const typicalDays = done.length ? median(done.map((e) => e.days)) : null;
   let trend: RecoveryProfile["trend"] = null;
   if (done.length >= 3) {
@@ -72,11 +87,14 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[]): Recove
 
   const ongoing = episodes.find((e) => !e.end);
   let text: string;
+  const gappy = episodes.filter((e) => e.uncertain).length;
   if (!episodes.length) text = days.length < 14 ? "Recovery patterns appear once Calm has seen a harder stretch and how you come back from it." : "No sustained strain episodes so far — your harder days have resolved quickly.";
   else if (ongoing) text = `${ongoing.days === 0 ? "A harder stretch started today." : `You're ${ongoing.days + 1} days into a harder stretch.`}${typicalDays != null ? ` Previously you've come back in about ${round(typicalDays, 0)} days.` : ""}`;
-  else text = `After harder stretches you typically return to your usual in about ${round(typicalDays!, 0)} day${typicalDays === 1 ? "" : "s"}.`;
+  else if (typicalDays == null) text = "Calm has seen harder stretches, but gaps in check-ins mean it can't yet say how long recovery usually takes.";
+  else text = `After harder stretches you typically return to your usual in about ${round(typicalDays, 0)} day${typicalDays === 1 ? "" : "s"}.`;
   if (helpers.length) text += ` Recoveries often included: ${helpers.map(prettyTag).join(", ")}.`;
   if (trend === "faster") text += " You're bouncing back faster than earlier on.";
+  if (gappy) text += ` (${gappy} stretch${gappy > 1 ? "es" : ""} had gaps in check-ins, so ${gappy > 1 ? "they aren't" : "it isn't"} counted.)`;
 
   return { episodes, typicalDays, trend, helpers, text };
 }

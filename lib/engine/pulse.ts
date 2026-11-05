@@ -5,10 +5,11 @@ import { clamp, ewma, round } from "./stats";
 
 export const STRAIN_WEIGHTS: Record<BMetric, number> = { stress: 0.35, mood: 0.25, energy: 0.2, sleepHours: 0.15, focus: 0.05 };
 
-export type PulseState = "learning" | "bright" | "steady" | "stretched" | "strained" | "running-low" | "recovering";
+export type PulseState = "learning" | "no-recent" | "bright" | "steady" | "stretched" | "strained" | "running-low" | "recovering";
 
 export const STATE_COPY: Record<PulseState, { label: string; blurb: string }> = {
   learning: { label: "Getting to know you", blurb: "A few more check-ins and Calm will know what your usual looks like." },
+  "no-recent": { label: "Not enough recent data", blurb: "No check-ins in the last few days, so Calm won't guess how you're doing. A quick one brings your pulse up to date." },
   bright: { label: "Brighter than usual", blurb: "You're doing better than your own typical — worth noticing what's helping." },
   steady: { label: "Steady", blurb: "You're within your usual range." },
   stretched: { label: "Stretched", blurb: "You're running a bit outside your usual. Nothing alarming — a small reset may help." },
@@ -63,25 +64,28 @@ export function strainFor(b: Baseline, values: Record<BMetric, number | null>) {
 
 /** Daily strain series using a rolling, look-back-only baseline (no future leakage). */
 export function strainSeries(days: Day[]) {
-  return days.map((d) => {
+  return [...days].sort((a, b) => (a.date < b.date ? -1 : 1)).map((d) => {
     const b = computeBaseline(days, d.date);
     const vals = Object.fromEntries(BMETRICS.map((m) => [m, d[m]])) as Record<BMetric, number | null>;
     return { date: d.date, strain: strainFor(b, vals).strain, stage: b.stage };
   });
 }
 
-export function computePulse(days: Day[], now = new Date()): Pulse {
+export function computePulse(allDays: Day[], now = new Date()): Pulse {
   const asOf = localDate(now);
+  // Ignore anything dated after "now" (clock skew, delayed or out-of-order imports).
+  const days = allDays.filter((d) => d.date <= asOf);
   const baseline = computeBaseline(days, asOf);
   const { values, n } = recentValues(days, asOf);
   const last = days.at(-1) ?? null;
 
   if (!last || n === 0) {
-    const s = STATE_COPY.learning;
+    const state: PulseState = days.length >= 5 ? "no-recent" : "learning";
+    const s = STATE_COPY[state];
     return {
-      state: "learning", label: s.label, blurb: days.length ? "No check-ins in the last few days — a quick one brings your pulse up to date." : s.blurb,
-      score: 60, strain: 0, confidence: 0, confidenceText: "No recent data", stage: baseline.stage, drivers: [],
-      lastCheckIn: last?.date ?? null, baseline,
+      state, label: s.label, blurb: s.blurb,
+      score: 60, strain: 0, confidence: 0, confidenceText: last ? `Last check-in ${daysBetween(last.date, asOf)} days ago` : "No data yet",
+      stage: baseline.stage, drivers: [], lastCheckIn: last?.date ?? null, baseline,
     };
   }
 
@@ -110,15 +114,22 @@ export function computePulse(days: Day[], now = new Date()): Pulse {
   else if (strain <= -0.6) state = "bright";
   else state = "steady";
 
-  // Confidence: how much personal history backs this, and how fresh it is
+  // Confidence is a heuristic, not a probability. It multiplies:
+  //  - personal: how much of the baseline is the person's own data (0 → 1 by ~day 21)
+  //  - freshness: how recent the latest check-in is
+  //  - coverage: how much of the strain weighting is backed by actual metrics, and
+  //    whether the recent window has more than a single day in it
   const personal = baseline.stress.personalWeight;
   const staleness = daysBetween(last.date, asOf);
   const freshness = staleness <= 0 ? 1 : staleness === 1 ? 0.8 : staleness === 2 ? 0.6 : 0.4;
-  const confidence = round(clamp(personal * freshness, 0, 1), 2);
+  const weightPresent = BMETRICS.reduce((a, m) => a + (values[m] != null ? STRAIN_WEIGHTS[m] : 0), 0);
+  const coverage = (0.6 + 0.4 * weightPresent) * (n >= 2 ? 1 : 0.85);
+  const confidence = round(clamp(personal * freshness * coverage, 0, 1), 2);
   const confidenceText =
     baseline.stage === "learning" ? `Early read — based on ${baseline.days} day${baseline.days === 1 ? "" : "s"}`
-    : confidence >= 0.7 ? `Solid read — ${baseline.days} days of your history`
     : staleness >= 2 ? `Last check-in ${staleness} days ago`
+    : confidence >= 0.7 ? `Solid read — ${baseline.days} days of your history`
+    : weightPresent < 0.75 ? "Partial read — some measures missing recently"
     : `Forming — ${baseline.days} days so far`;
 
   const copy = STATE_COPY[state];

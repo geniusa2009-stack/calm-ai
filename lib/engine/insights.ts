@@ -2,7 +2,7 @@ import type { Day } from "./days";
 import { daysBetween, localDate } from "./days";
 import type { SupportSession } from "../types";
 import { computeBaseline } from "./baseline";
-import { tagEffects, sleepLinks, weekdayPatterns, prettyTag } from "./context";
+import { tagEffects, sleepLinks, weekdayPatterns, prettyTag, confidenceFromQ } from "./context";
 import { recoveryProfile } from "./recovery";
 import { toolEfficacy, toolById } from "./support";
 import { mean, round } from "./stats";
@@ -54,13 +54,14 @@ export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback
   }
 
   const sl = sleepLinks(days)[0];
-  if (sl) out.push({ key: `sleep:${sl.metric}`, kind: "sleep", confidence: Math.abs(sl.r) > 0.45 ? "high" : "medium", title: "Sleep matters for you", body: sl.text });
+  if (sl) out.push({ key: `sleep:${sl.metric}`, kind: "sleep", confidence: confidenceFromQ(sl.q, sl.n) ?? "low", title: "Sleep matters for you", body: sl.text });
 
   const wk = weekdayPatterns(days)[0];
-  if (wk) out.push({ key: `rhythm:${wk.weekday}`, kind: "rhythm", confidence: wk.n >= 5 ? "medium" : "low", title: `Your ${wk.weekday}s`, body: wk.text });
+  if (wk) out.push({ key: `rhythm:${wk.weekday}`, kind: "rhythm", confidence: confidenceFromQ(wk.q, wk.n) ?? "low", title: `Your ${wk.weekday}s`, body: wk.text });
 
   const rec = recoveryProfile(days, sessions);
-  if (rec.episodes.length) out.push({ key: "recovery:profile", kind: "recovery", confidence: rec.episodes.length >= 2 ? "medium" : "low", title: "How you recover", body: rec.text });
+  const reliable = rec.episodes.filter((e) => e.end && !e.uncertain).length;
+  if (rec.episodes.length) out.push({ key: "recovery:profile", kind: "recovery", confidence: reliable >= 3 ? "medium" : "low", title: "How you recover", body: rec.text });
 
   const eff = Object.values(toolEfficacy(sessions)).filter((e) => e.sessions >= 2 && e.avgDrop != null).sort((a, c) => c.score - a.score)[0];
   if (eff && eff.avgDrop! > 0.5) {

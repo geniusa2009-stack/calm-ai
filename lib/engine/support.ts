@@ -70,7 +70,7 @@ export function recommend(state: PulseState, sessions: SupportSession[], mode: M
   const hour = now.getHours();
   const evening = hour >= 20 || hour < 4;
   const preferred = MODES[mode].preferredTools;
-  const key: PulseState = state === "learning" ? "steady" : state;
+  const key: PulseState = state === "learning" || state === "no-recent" ? "steady" : state;
 
   return TOOLS.map((tool) => {
     const fit = tool.fits[key] ?? 0.2;
