@@ -1,0 +1,42 @@
+import Link from "next/link";
+import { snapshot } from "@/lib/snapshot";
+import { DemoBanner } from "@/components/DemoBanner";
+
+export const dynamic = "force-dynamic";
+
+export default function SupportPage() {
+  const s = snapshot();
+  const recs = s.recommendations;
+  return (
+    <div className="stack" style={{ gap: 20 }}>
+      {s.checkins.some((c) => c.source === "demo") && <DemoBanner />}
+      <div className="head">
+        <h1>Support</h1>
+        <p>Ranked for how you&apos;re doing right now ({s.pulse.label.toLowerCase()}), the time of day, your mode, and — most of all — what has actually helped <em>you</em> before. Rate each session afterwards and the ranking keeps learning.</p>
+      </div>
+      <div className="grid g2">
+        {recs.map((r, i) => (
+          <Link key={r.tool.id} href={`/support/${r.tool.id}`} className="card tool-card" style={i === 0 ? { borderColor: "var(--accent)" } : undefined}>
+            <div className="row between">
+              <strong style={{ fontSize: "1.05rem" }}>{r.tool.name}</strong>
+              <span className="faint">{r.tool.minutes} min{i === 0 ? " · best fit now" : ""}</span>
+            </div>
+            <span className="muted">{r.tool.summary}</span>
+            <span className="faint">{r.reason}</span>
+            {r.personal.sessions > 0 && (
+              <span className="faint">Used {r.personal.sessions}×{r.personal.avgDrop != null ? ` · avg stress change ${r.personal.avgDrop > 0 ? "−" : "+"}${Math.abs(r.personal.avgDrop)}` : ""}</span>
+            )}
+          </Link>
+        ))}
+      </div>
+      <div className="card">
+        <h2>Prefer to talk?</h2>
+        <p className="muted">Reaching out to someone you trust is often the most effective support there is.</p>
+        <div className="row">
+          <Link href="/circle" className="btn ghost">My trusted circle</Link>
+          {s.settings.companionEnabled && <Link href="/companion" className="btn ghost">Talk it through with the companion</Link>}
+        </div>
+      </div>
+    </div>
+  );
+}
