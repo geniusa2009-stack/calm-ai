@@ -52,20 +52,31 @@ Schema migrations run automatically on startup.
 | **Safety layer**: deterministic crisis detection that runs before any model call | `lib/safety.ts` |
 | **Passive signals**: provider interface, validated JSON import, demo provider | `lib/signals/*`, see `docs/SIGNALS.md` |
 | **Data rights**: export, wipe data, delete account | `app/api/export`, `app/api/reset`, `app/api/account` |
+| **Design system and motion**: tokens, `PageHeader`, `EmptyState`, `Notice`, `Dialog`, skeletons, page transitions, reduced motion | `app/globals.css`, `components/ui/*`, `app/template.tsx`, `app/loading.tsx` |
+| **Optional device setup**: reminders, screen-on during sessions, haptic cues; never prompts unasked | `app/setup/devices`, `app/settings/DevicePermissions.tsx`, `lib/device/*` |
 
 ## Tests
 
-`npm test` runs 74 tests:
+`npm test` runs 93 tests:
 - **Engine:** baselines, pulse, radar, context, recovery, support, what-if and insights.
 - **Scenarios:** stable, noisy, abrupt, gradual, missing data, leakage and ordering, all on seeded synthetic data.
 - **Security:** route-coverage scan, 401 on every protected handler, cross-user read/update/delete attempts, CSRF, sessions, throttling, deletion cascade, demo separation, migrations.
 - **Signals:** validation, duplicates, corrections, out-of-order and delayed data, overlap, timezone, isolation.
+- **Device:** every permission outcome (granted, denied, dismissed, unsupported, no re-prompt after denial), reminder policy, reduced motion, and static checks that nothing else can prompt and that location, microphone, camera and motion sensors are never used.
+
+Browser checks (`e2e/ui.e2e.cjs`, 21 journeys at phone, tablet and desktop sizes) run against a live server using the Playwright installed on the machine:
+
+```bash
+npm run build && CALM_DB_PATH=/tmp/calm-e2e.db npm start -- -p 3100   # in one terminal
+E2E_URL=http://localhost:3100 npm run e2e                             # in another
+```
 
 ## Docs
 
 - `SECURITY.md`: security model, findings and fixes, known gaps.
 - `docs/ENGINE_AUDIT.md`: measured false-alarm and detection rates, statistical limitations.
 - `docs/SIGNALS.md`: what is and isn't integrated, the import format, how to add a provider.
+- `docs/UX.md`: design tokens, motion and reduced-motion rules, device capabilities and their exact browser limits.
 
 ## Known limitations
 
@@ -73,4 +84,4 @@ Schema migrations run automatically on startup.
 - **No live wearable integrations.** There's file import and a demo provider only.
 - **Time zones:** check-in days are grouped in the **server's** time zone. Wearable readings can carry a device offset, but check-ins can't yet.
 - **Deployment:** single process with SQLite. No email verification, password reset or MFA, and no scheduled sync jobs.
-- **Notifications** are in-app only.
+- **Reminders** (browser notifications) arrive only while Calm is open in a tab. There's no push server, so nothing is delivered when the browser is closed. iPhone needs Calm added to the Home Screen. Haptic cues don't work on iOS Safari.

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "seed": "tsx scripts/seed.ts",
-    "claim-legacy": "tsx scripts/claim-legacy.ts"
+    "claim-legacy": "tsx scripts/claim-legacy.ts",
+    "e2e": "node e2e/ui.e2e.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

@@ -37,15 +37,15 @@ export function LabClient({ tags }: { tags: string[] }) {
         </div>
         <label className="row" style={{ gap: 8 }}><input type="checkbox" checked={daily} onChange={(e) => setDaily(e.target.checked)} /> Used my most effective support tool daily</label>
       </div>
-      <div className="card stack">
+      <div className="card stack" aria-live="polite">
         <h2>…my weeks might look like</h2>
-        {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
-        {!res ? <p className="muted">Calculating…</p> : !res.ready ? <p className="muted">{res.caveat}</p> : (
+        {err && <div className="notice error" role="alert">{err}</div>}
+        {!res ? <div className="stack" aria-busy="true"><span className="sr-only">Calculating…</span>{[0, 1, 2].map((k) => <div key={k} className="skeleton" style={{ height: 42 }} />)}</div> : !res.ready ? <p className="muted">{res.caveat}</p> : (
           <>
             {res.projections.map((p) => {
               const d = Math.round((p.projected - p.current) * 10) / 10;
               return (
-                <div key={p.metric} className="stack" style={{ gap: 2 }}>
+                <div key={p.metric + p.projected} className="stack fade-swap" style={{ gap: 2 }}>
                   <div className="row between"><strong style={{ textTransform: "capitalize" }}>{p.metric}</strong>
                     <span style={{ color: d === 0 ? "var(--ink-2)" : good(p.metric, d) ? "var(--bright)" : "var(--strain)", fontWeight: 600 }}>{p.current} → {p.projected}</span></div>
                   <span className="faint">Plausible range {p.low}–{p.high}</span>

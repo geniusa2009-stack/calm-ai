@@ -75,7 +75,15 @@ export interface Settings {
   companionEnabled: boolean;
   companionUsesContext: boolean;
   region: string; // for crisis resources
+  // Device features (app-level opt-ins only; browser permission state is never stored)
+  notifyEnabled: boolean;
+  wakeLockEnabled: boolean;
+  hapticsEnabled: boolean;
+  deviceSetup: DeviceSetup;
+  deviceStep: number;
 }
+
+export type DeviceSetup = "pending" | "in-progress" | "done" | "skipped";
 
 export const METRICS = ["stress", "mood", "energy", "sleepHours", "focus"] as const;
 export type Metric = (typeof METRICS)[number];

@@ -26,19 +26,19 @@ export function LoginForm({ initialMode }: { initialMode: "login" | "register" }
   }
 
   return (
-    <div className="stack" style={{ maxWidth: 440, margin: "6vh auto 0" }}>
+    <div className="stack lg stagger" style={{ maxWidth: 440, margin: "6vh auto 0" }}>
       <div className="brand" style={{ padding: 0 }}><span className="brand-dot" aria-hidden /> Calm</div>
       <div className="head">
         <h1>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
         <p>Calm learns what <em>your</em> usual looks like and notices when things start to drift. It isn&apos;t a diagnosis tool or a crisis service.</p>
       </div>
       <form className="card stack" onSubmit={submit}>
-        <label className="field">Email<input type="text" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={254} /></label>
+        <label className="field">Email<input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={254} /></label>
         <label className="field">Password {mode === "register" && <span className="faint">At least 10 characters</span>}
           <input type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required maxLength={200} />
         </label>
-        {err && <p role="alert" style={{ color: "var(--strain)", margin: 0 }}>{err}</p>}
-        <button className="btn big" disabled={busy}>{mode === "login" ? "Sign in" : "Create account"}</button>
+        {err && <div className="notice error" role="alert">{err}</div>}
+        <button className="btn big" disabled={busy} aria-busy={busy}>{busy && <span className="spinner" aria-hidden />}{mode === "login" ? "Sign in" : "Create account"}</button>
         <button type="button" className="btn ghost small" onClick={() => { setMode(mode === "login" ? "register" : "login"); setErr(null); }}>
           {mode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>

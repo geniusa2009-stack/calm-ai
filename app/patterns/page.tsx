@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { patternsSnapshot } from "@/lib/snapshot";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { insightFeedback } from "@/lib/db";
 import { tagEffects, sleepLinks, weekdayPatterns } from "@/lib/engine/context";
@@ -24,20 +26,20 @@ export default async function PatternsPage() {
 
   if (s.days.length < 3) {
     return (
-      <div className="stack">
-        <div className="head"><h1>Patterns</h1><p>Patterns appear as you check in. After about a week Calm can show your usual ranges; after two, it starts linking context to how you feel.</p></div>
-        <div className="card"><p className="muted">{s.days.length} of ~7 days so far.</p></div>
+      <div className="stack lg">
+        <PageHeader eyebrow="Understand" title="Patterns" />
+        <EmptyState icon="∿" title="Patterns appear as you check in" action={<Link href="/check-in" className="btn">Check in now</Link>}>
+          After about a week Calm can show your usual ranges; after two, it starts linking context to how you feel. {s.days.length} of ~7 days so far.
+        </EmptyState>
+        <div className="progress" aria-label="Days logged" role="progressbar" aria-valuemin={0} aria-valuemax={7} aria-valuenow={s.days.length}><span style={{ transform: `scaleX(${Math.min(1, s.days.length / 7)})` }} /></div>
       </div>
     );
   }
 
   return (
-    <div className="stack" style={{ gap: 20 }}>
+    <div className="stack lg stagger">
       {user.isDemo && <DemoBanner />}
-      <div className="head">
-        <h1>Patterns</h1>
-        <p>What Calm has learned about you so far. These are associations from your own check-ins — useful hints, not diagnoses or proven causes. Tell Calm when something doesn&apos;t fit.</p>
-      </div>
+      <PageHeader eyebrow="Understand" title={<>Patterns</>} lead=<>What Calm has learned about you so far. These are associations from your own check-ins — useful hints, not diagnoses or proven causes. Tell Calm when something doesn&apos;t fit.</> />
 
       {s.insights.length > 0 && (
         <section className="stack" aria-labelledby="ins-h">

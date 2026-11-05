@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Slider } from "@/components/Slider";
 import { api } from "@/lib/client";
 import type { Tool } from "@/lib/engine/support";
+import { acquireWakeLock, tap } from "@/lib/device/capabilities";
 
 type Phase = { label: string; secs: number; scale: number };
 const BREATHS: Record<string, Phase[]> = {
@@ -42,7 +43,7 @@ const STEPS: Record<string, { text: string; secs?: number; input?: boolean }[]> 
   ],
 };
 
-function Breathing({ id, minutes, onDone }: { id: string; minutes: number; onDone: () => void }) {
+function Breathing({ id, minutes, onDone, haptics }: { id: string; minutes: number; onDone: () => void; haptics: boolean }) {
   const phases = BREATHS[id];
   const cycleSecs = phases.reduce((a, p) => a + p.secs, 0);
   const totalCycles = id === "breath-sigh" ? 5 : Math.max(3, Math.round((minutes * 60) / cycleSecs));
@@ -62,7 +63,8 @@ function Breathing({ id, minutes, onDone }: { id: string; minutes: number; onDon
     }
     setI(next);
     setCount(phases[next].secs);
-  }, [count, i, cycle, phases, totalCycles, onDone]);
+    if (haptics) tap(undefined, phases[next].label.startsWith("Hold") ? 12 : 28); // gentle cue at each phase change
+  }, [count, i, cycle, phases, totalCycles, onDone, haptics]);
   const p = phases[i];
   return (
     <div className="breath-stage" aria-live="polite">
@@ -153,7 +155,27 @@ function Soundscape({ minutes, onDone }: { minutes: number; onDone: () => void }
   );
 }
 
-export function Runner({ tool, initialStress }: { tool: Tool; initialStress: number }) {
+/** Hold a screen wake lock while `active`; re-acquire when the tab becomes visible again. */
+function useSessionWakeLock(active: boolean) {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    let sentinel: { release: () => Promise<void> } | null = null;
+    let cancelled = false;
+    const get = async () => {
+      const r = await acquireWakeLock();
+      if (cancelled) { if (r.ok) r.sentinel.release().catch(() => {}); return; }
+      if (r.ok) { sentinel = r.sentinel; setHeld(true); } else setHeld(false);
+    };
+    get();
+    const onVis = () => { if (document.visibilityState === "visible") get(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; document.removeEventListener("visibilitychange", onVis); sentinel?.release().catch(() => {}); setHeld(false); };
+  }, [active]);
+  return held;
+}
+
+export function Runner({ tool, initialStress, prefs = { wakeLock: false, haptics: false } }: { tool: Tool; initialStress: number; prefs?: { wakeLock: boolean; haptics: boolean } }) {
   const router = useRouter();
   const [stage, setStage] = useState<"pre" | "run" | "post" | "done">("pre");
   const [pre, setPre] = useState(initialStress);
@@ -163,6 +185,7 @@ export function Runner({ tool, initialStress }: { tool: Tool; initialStress: num
   const [saveNotes, setSaveNotes] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const started = useRef(0);
+  const screenOn = useSessionWakeLock(stage === "run" && prefs.wakeLock);
 
   const finish = (n?: string[]) => { if (n) setNotes(n); setPost(pre); setStage("post"); };
 
@@ -184,9 +207,10 @@ export function Runner({ tool, initialStress }: { tool: Tool; initialStress: num
     </div>
   );
   if (stage === "run") {
-    if (tool.kind === "breathing") return <div className="card"><Breathing id={tool.id} minutes={tool.minutes} onDone={() => finish()} /><div className="row" style={{ justifyContent: "center" }}><button className="btn ghost small" onClick={() => finish()}>Finish early</button></div></div>;
-    if (tool.kind === "audio") return <Soundscape minutes={tool.minutes} onDone={() => finish()} />;
-    return <Steps id={tool.id} onDone={finish} />;
+    const note = screenOn ? <p className="faint" style={{ textAlign: "center", margin: 0 }}>Screen will stay on until you finish.</p> : null;
+    if (tool.kind === "breathing") return <div className="card stack"><Breathing id={tool.id} minutes={tool.minutes} onDone={() => finish()} haptics={prefs.haptics} /><div className="row" style={{ justifyContent: "center" }}><button className="btn ghost small" onClick={() => finish()}>Finish early</button></div>{note}</div>;
+    if (tool.kind === "audio") return <div className="stack"><Soundscape minutes={tool.minutes} onDone={() => finish()} />{note}</div>;
+    return <div className="stack"><Steps id={tool.id} onDone={finish} />{note}</div>;
   }
   if (stage === "post") return (
     <div className="card stack">
@@ -199,7 +223,7 @@ export function Runner({ tool, initialStress }: { tool: Tool; initialStress: num
         ))}
       </div>
       {notes.some(Boolean) && <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={saveNotes} onChange={(e) => setSaveNotes(e.target.checked)} /> Save what I wrote to my memory</label>}
-      {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
+      {err && <div className="notice error" role="alert">{err}</div>}
       <div className="row"><button className="btn" onClick={save}>Save</button></div>
     </div>
   );

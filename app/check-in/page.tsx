@@ -1,4 +1,5 @@
 import { snapshot } from "@/lib/snapshot";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { CheckInForm } from "./CheckInForm";
 import { round } from "@/lib/engine/stats";
@@ -16,10 +17,7 @@ export default async function CheckInPage() {
   const usualSleep = s.pulse.baseline.sleepHours.center;
   return (
     <div className="stack" style={{ maxWidth: 680 }}>
-      <div className="head">
-        <h1>Check in</h1>
-        <p>About 20 seconds. There are no right answers. Calm compares this to <em>your</em> usual, not anyone else&apos;s.</p>
-      </div>
+      <PageHeader eyebrow="Today" title={<>Check in</>} lead=<>About 20 seconds. There are no right answers. Calm compares this to <em>your</em> usual, not anyone else&apos;s.</> />
       <CheckInForm suggestedTags={suggested} showFocus={s.mode.showFocus} alreadyToday={s.checkedInToday} defaultSleep={Math.round(round(usualSleep, 2) * 4) / 4} />
     </div>
   );

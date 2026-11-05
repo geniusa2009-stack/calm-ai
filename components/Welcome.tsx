@@ -22,8 +22,9 @@ export function Welcome() {
   }
 
   return (
-    <div className="stack" style={{ maxWidth: 640 }}>
-      <div className="head">
+    <div className="stack lg stagger" style={{ maxWidth: 640 }}>
+      <div className="head page-enter">
+        <span className="eyebrow">Getting started</span>
         <h1>Welcome to Calm</h1>
         <p>Calm learns what <em>your</em> usual looks like from short daily check-ins, notices when things start to drift, and suggests support that has actually worked for you. It isn&apos;t a diagnosis tool and it doesn&apos;t compare you to anyone else.</p>
       </div>
@@ -47,7 +48,7 @@ export function Welcome() {
           <button className="btn big" disabled={busy} onClick={start}>Start with my first check-in</button>
         </div>
         <p className="faint">Your data is stored under your account only. You can export or delete it at any time in Settings.</p>
-        {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
+        {err && <div className="notice error" role="alert">{err}</div>}
       </div>
     </div>
   );

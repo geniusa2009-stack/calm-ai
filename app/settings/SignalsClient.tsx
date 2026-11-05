@@ -52,9 +52,9 @@ export function SignalsClient({ providers, conns, isDemo }: { providers: P[]; co
           );
         })}
       </div>
-      {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
+      {err && <div className="notice error" role="alert">{err}</div>}
       {report && (
-        <div className="nudge info" aria-live="polite">
+        <div className="notice info" role="status">
           <span>{report.file}: {report.inserted} new, {report.updated} corrected, {report.duplicates} already had, {report.rejected.length} rejected
             {report.rejected.length > 0 && <> — e.g. #{report.rejected[0].index}: {report.rejected[0].reason}</>}</span>
         </div>

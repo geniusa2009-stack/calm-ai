@@ -48,10 +48,10 @@ export function CheckInForm({ suggestedTags, showFocus, alreadyToday, defaultSle
     const p = result.pulse;
     const harder = p.state === "strained" || p.state === "stretched";
     return (
-      <div className="stack">
+      <div className="stack stagger">
         {result.crisis && result.resources && <CrisisCard resources={result.resources} />}
-        <div className="card stack">
-          <span className="faint">Thanks — saved.</span>
+        <div className="card raised stack" tabIndex={-1} ref={(el) => el?.focus()} aria-live="polite">
+          <span className="eyebrow">Thanks — saved</span>
           <h2>Your pulse: {p.label}</h2>
           <p>{p.blurb}</p>
           {p.drivers.length > 0 && <ul style={{ margin: 0, paddingLeft: 18 }}>{p.drivers.map((d) => <li key={d.metric}>{d.text}</li>)}</ul>}
@@ -66,7 +66,7 @@ export function CheckInForm({ suggestedTags, showFocus, alreadyToday, defaultSle
   }
 
   return (
-    <form onSubmit={submit} className="stack" style={{ gap: 18 }}>
+    <form onSubmit={submit} className="stack lg stagger">
       <div className="card stack" style={{ gap: 20 }}>
         <Slider label="Stress" value={stress} onChange={setStress} lo="Calm" hi="Overwhelmed" />
         <Slider label="Mood" value={mood} onChange={setMood} lo="Low" hi="Great" />
@@ -107,8 +107,8 @@ export function CheckInForm({ suggestedTags, showFocus, alreadyToday, defaultSle
         {note && <label className="row" style={{ gap: 6, fontSize: "0.9rem" }}><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Save this to my memory</label>}
       </div>
 
-      {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
-      <div><button className="btn big" disabled={busy}>{busy ? "Saving…" : "Save check-in"}</button></div>
+      {err && <div className="notice error" role="alert">{err}</div>}
+      <div className="row"><button className="btn big" disabled={busy} aria-busy={busy}>{busy && <span className="spinner" aria-hidden />}{busy ? "Saving…" : "Save check-in"}</button></div>
     </form>
   );
 }

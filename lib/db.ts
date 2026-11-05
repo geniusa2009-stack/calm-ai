@@ -24,6 +24,11 @@ const DEFAULT_SETTINGS: Settings = {
   companionEnabled: true,
   companionUsesContext: true,
   region: "US",
+  notifyEnabled: false,
+  wakeLockEnabled: false,
+  hapticsEnabled: false,
+  deviceSetup: "pending",
+  deviceStep: 0,
 };
 
 let _db: Database.Database | null = null;

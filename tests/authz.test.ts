@@ -85,6 +85,19 @@ test("coverage: every page except /login requires a signed-in user", () => {
   }
 });
 
+test("middleware: signed-out page requests get a real redirect; API and /login are left alone", async () => {
+  const { middleware, config } = await import(path.join(ROOT, "middleware.ts"));
+  const { NextRequest } = await import("next/server");
+  const res = middleware(new NextRequest("http://calm.test/settings"));
+  assert.equal(res.status, 307);
+  assert.equal(new URL(res.headers.get("location")!).pathname, "/login");
+  const withCookie = middleware(new NextRequest("http://calm.test/settings", { headers: { cookie: `${SESSION_COOKIE}=abc` } }));
+  assert.equal(withCookie.headers.get("location"), null);
+  const re = new RegExp("^" + config.matcher[0].replace("/((?!", "/(?!(?:").replace(").*)", ")).*") + "$");
+  for (const p of ["/", "/settings", "/setup/devices", "/support/breath-box"]) assert.ok(re.test(p), `${p} should be matched`);
+  for (const p of ["/login", "/api/export", "/_next/static/x.js", "/favicon.ico"]) assert.ok(!re.test(p), `${p} should not be matched`);
+});
+
 test("authentication: every protected handler returns 401 without a session", async () => {
   for (const r of apiRoutes()) {
     if (PUBLIC_ROUTES.has(r.name)) continue;

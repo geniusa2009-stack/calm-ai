@@ -1,4 +1,5 @@
 import { snapshot } from "@/lib/snapshot";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { listCircle } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { crisisResources } from "@/lib/safety";
@@ -11,11 +12,8 @@ export default async function CirclePage() {
   const s = snapshot(user.id);
   const resources = crisisResources(s.settings.region);
   return (
-    <div className="stack" style={{ gap: 20, maxWidth: 820 }}>
-      <div className="head">
-        <h1>Circle &amp; help</h1>
-        <p>Apps are good for small resets. People are better for the big stuff. This is where Calm points you toward them.</p>
-      </div>
+    <div className="stack lg" style={{ gap: 24, maxWidth: 820 }}>
+      <PageHeader eyebrow="People" title={<>Circle &amp; help</>} lead=<>Apps are good for small resets. People are better for the big stuff. This is where Calm points you toward them.</> />
 
       <section className="card stack" aria-labelledby="tc-h">
         <h2 id="tc-h">Trusted circle</h2>

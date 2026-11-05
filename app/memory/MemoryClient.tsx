@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import type { Memory, MemoryKind } from "@/lib/types";
+import { EmptyState, Notice } from "@/components/ui";
 
 const KIND_LABEL: Record<MemoryKind, string> = { note: "Note", win: "Win", trigger: "Watch out for", helped: "What helped", insight: "Insight" };
 
@@ -30,18 +31,22 @@ export function MemoryClient({ memories }: { memories: Memory[] }) {
           ))}
         </div>
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} placeholder={kind === "helped" ? "e.g. Calling Sam after a hard day" : kind === "trigger" ? "e.g. Back-to-back meetings with no lunch" : "Anything worth remembering"} aria-label="Memory text" />
-        {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
+        {err && <Notice tone="error">{err}</Notice>}
         <div><button className="btn">Remember this</button></div>
       </form>
 
-      <div className="row">
+      <div className="row" role="group" aria-label="Filter memories">
         {(["all", ...Object.keys(KIND_LABEL)] as (MemoryKind | "all")[]).map((k) => (
-          <button key={k} className={`chip ${filter === k ? "on" : ""}`} onClick={() => setFilter(k)}>{k === "all" ? "All" : KIND_LABEL[k]}</button>
+          <button key={k} className={`chip ${filter === k ? "on" : ""}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{k === "all" ? "All" : KIND_LABEL[k]}</button>
         ))}
       </div>
 
-      {shown.length === 0 ? <p className="muted">Nothing here yet.</p> : (
-        <div className="stack">
+      {shown.length === 0 ? (
+        <EmptyState icon="❖" title={filter === "all" ? "Nothing remembered yet" : "Nothing in this category yet"}>
+          {filter === "all" ? "Add something that helped, a trigger to watch for, or a win worth keeping. Calm also adds an entry when a support session clearly works." : "Try another filter, or add one above."}
+        </EmptyState>
+      ) : (
+        <div className="stack stagger">
           {shown.map((m) => (
             <div key={m.id} className="card tight stack" style={{ gap: 6 }}>
               <div className="row between">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/ui";
 export default function NotFound() {
-  return <div className="stack"><h1>Not here</h1><p className="muted">That page doesn&apos;t exist.</p><Link href="/" className="btn ghost">Back to today</Link></div>;
+  return <EmptyState icon="?" title="Nothing here" action={<Link href="/" className="btn ghost">Back to Today</Link>}>That page doesn&apos;t exist, or it may have moved.</EmptyState>;
 }

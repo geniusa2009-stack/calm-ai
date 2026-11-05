@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { snapshot } from "@/lib/snapshot";
 import { requireUser } from "@/lib/session";
 import { DemoBanner } from "@/components/DemoBanner";
@@ -10,15 +11,12 @@ export default async function SupportPage() {
   const s = snapshot(user.id);
   const recs = s.recommendations;
   return (
-    <div className="stack" style={{ gap: 20 }}>
+    <div className="stack lg" style={{ gap: 24 }}>
       {user.isDemo && <DemoBanner />}
-      <div className="head">
-        <h1>Support</h1>
-        <p>Ranked for how you&apos;re doing right now ({s.pulse.label.toLowerCase()}), the time of day, your mode, and — most of all — what has actually helped <em>you</em> before. Rate each session afterwards and the ranking keeps learning.</p>
-      </div>
-      <div className="grid g2">
+      <PageHeader eyebrow="Support" title={<>Support</>} lead=<>Ranked for how you&apos;re doing right now ({s.pulse.label.toLowerCase()}), the time of day, your mode, and — most of all — what has actually helped <em>you</em> before. Rate each session afterwards and the ranking keeps learning.</> />
+      <div className="grid g2 stagger">
         {recs.map((r, i) => (
-          <Link key={r.tool.id} href={`/support/${r.tool.id}`} className="card tool-card" style={i === 0 ? { borderColor: "var(--accent)" } : undefined}>
+          <Link key={r.tool.id} href={`/support/${r.tool.id}`} className={`card tool-card ${i === 0 ? "featured" : ""}`}>
             <div className="row between">
               <strong style={{ fontSize: "1.05rem" }}>{r.tool.name}</strong>
               <span className="faint">{r.tool.minutes} min{i === 0 ? " · best fit now" : ""}</span>

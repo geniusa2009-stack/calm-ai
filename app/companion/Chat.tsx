@@ -31,16 +31,16 @@ export function Chat({ initial, configured }: { initial: Msg[]; configured: bool
 
   return (
     <div className="stack">
-      {!configured && <div className="nudge info"><span>The AI companion isn&apos;t configured on this server (no <code>ANTHROPIC_API_KEY</code>). You can still send messages — you&apos;ll get a clear note back, and safety support always works.</span></div>}
+      {!configured && <div className="notice info" role="status"><span>The AI companion isn&apos;t configured on this server (no <code>ANTHROPIC_API_KEY</code>). You can still send messages — you&apos;ll get a clear note back, and safety support always works.</span></div>}
       {resources && <CrisisCard resources={resources} />}
       <div className="card stack">
         <div className="chat" aria-live="polite">
-          {msgs.length === 0 && <p className="muted">What&apos;s on your mind? You can vent, think something through, or ask for a small next step.</p>}
+          {msgs.length === 0 && <div className="empty" style={{ padding: 24 }}><div className="empty-ico" aria-hidden>✎</div><p>What&apos;s on your mind? You can vent, think something through, or ask for a small next step.</p></div>}
           {msgs.map((m, i) => <div key={i} className={`bubble ${m.role}`}>{m.content}</div>)}
-          {busy && <div className="bubble assistant faint">…</div>}
+          {busy && <div className="bubble assistant" aria-label="The companion is replying"><span className="typing" aria-hidden><i /><i /><i /></span></div>}
           <div ref={end} />
         </div>
-        {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
+        {err && <div className="notice error" role="alert">{err}</div>}
         <form onSubmit={send} className="row" style={{ flexWrap: "nowrap", alignItems: "flex-end" }}>
           <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} placeholder="Type here…" aria-label="Message" style={{ minHeight: 52 }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }} />
