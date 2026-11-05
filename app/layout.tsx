@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SideNav, BottomNav } from "@/components/Nav";
+import { currentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Calm",
@@ -8,15 +9,23 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#3f7d6e" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Chrome only; every page still enforces auth itself via requireUser().
+  const user = await currentUser();
   return (
     <html lang="en">
       <body>
-        <div className="shell">
-          <SideNav />
-          <main>{children}</main>
-        </div>
-        <BottomNav />
+        {user ? (
+          <>
+            <div className="shell">
+              <SideNav />
+              <main>{children}</main>
+            </div>
+            <BottomNav />
+          </>
+        ) : (
+          <main style={{ margin: "0 auto" }}>{children}</main>
+        )}
       </body>
     </html>
   );

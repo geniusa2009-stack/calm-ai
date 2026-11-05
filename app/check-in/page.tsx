@@ -1,11 +1,13 @@
 import { snapshot } from "@/lib/snapshot";
+import { requireUser } from "@/lib/session";
 import { CheckInForm } from "./CheckInForm";
 import { round } from "@/lib/engine/stats";
 
 export const dynamic = "force-dynamic";
 
-export default function CheckInPage() {
-  const s = snapshot();
+export default async function CheckInPage() {
+  const user = await requireUser();
+  const s = snapshot(user.id);
   // Offer the person's own frequently-used tags first, then mode suggestions.
   const freq = new Map<string, number>();
   s.days.slice(-30).forEach((d) => d.tags.forEach((t) => freq.set(t, (freq.get(t) ?? 0) + 1)));

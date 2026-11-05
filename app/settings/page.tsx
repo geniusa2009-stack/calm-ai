@@ -1,14 +1,16 @@
-import { getSettings, listCheckIns } from "@/lib/db";
+import { getSettings } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { companionConfigured } from "@/lib/companion";
 import { SettingsClient } from "./SettingsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireUser();
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <div className="head"><h1>Settings</h1></div>
-      <SettingsClient settings={getSettings()} configured={companionConfigured()} hasDemo={listCheckIns(365).some((c) => c.source === "demo")} />
+      <SettingsClient settings={getSettings(user.id)} configured={companionConfigured()} isDemo={user.isDemo} email={user.email} />
     </div>
   );
 }

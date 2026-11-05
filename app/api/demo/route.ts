@@ -1,7 +1,11 @@
 import { seedDemo } from "@/lib/seed";
-import { handle, oneOf } from "@/lib/validate";
+import { route } from "@/lib/http";
+import { oneOf, BadRequest } from "@/lib/validate";
 import type { Mode } from "@/lib/types";
-export const POST = handle(async (req) => {
+
+/** Reload demo data. Only demo accounts may do this — demo data never enters a real account. */
+export const POST = route(async (req, { user }) => {
+  if (!user.isDemo) throw new BadRequest("Demo data can only be loaded into a demo account. Use “Try the demo” from the sign-in page.");
   const b = await req.json().catch(() => ({}));
-  seedDemo(b.mode ? oneOf(b.mode, "mode", ["everyday", "study", "work", "activity", "recovery"] as Mode[]) : "work");
+  seedDemo(user.id, b.mode ? oneOf(b.mode, "mode", ["everyday", "study", "work", "activity", "recovery"] as Mode[]) : "work");
 });

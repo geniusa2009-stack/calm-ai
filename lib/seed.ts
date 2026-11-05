@@ -1,4 +1,4 @@
-import { addCheckIn, addMemory, addSession, addCircle, saveSettings, wipeAll } from "./db";
+import { addCheckIn, addMemory, addSession, addCircle, saveSettings, wipeUserData, type UserId } from "./db";
 import type { Mode, ToolId } from "./types";
 
 /** Small deterministic PRNG so demo data is the same every time. */
@@ -17,8 +17,8 @@ const clampInt = (x: number, lo = 1, hi = 10) => Math.max(lo, Math.min(hi, Math.
  * exercise helps, late screens cut sleep, one strain episode with a recovery,
  * and a gentle slide over the last few days for the radar to notice.
  */
-export function seedDemo(mode: Mode = "work", days = 42) {
-  wipeAll(true);
+export function seedDemo(uid: UserId, mode: Mode = "work", days = 42) {
+  wipeUserData(uid); // only ever called for a demo account (enforced by callers)
   const r = rng(7);
   const now = new Date();
   let prevSleep = 7.2;
@@ -62,7 +62,7 @@ export function seedDemo(mode: Mode = "work", days = 42) {
     const focus = clampInt(6 + (sleep - 7) * 0.6 - (stress - 5) * 0.35 + (r() - 0.5) * 1.5);
     const quality = clampInt(3 + (sleep - 7) * 0.9 + (r() - 0.5), 1, 5);
 
-    addCheckIn({
+    addCheckIn(uid, {
       ts: date.toISOString(), mood: clampInt(mood), energy: clampInt(energy), stress: clampInt(stress), focus,
       sleepHours: sleep, sleepQuality: quality, tags, mode,
       note: i === 27 ? "Three deadlines landed at once. Barely slept." : i === 22 ? "Took the afternoon off and went for a long walk. Felt human again." : null,
@@ -76,17 +76,17 @@ export function seedDemo(mode: Mode = "work", days = 42) {
       const [tool, eff] = options[Math.floor(r() * options.length)];
       const pre = clampInt(stress + r());
       const post = clampInt(pre - eff + (r() - 0.5) * 1.5);
-      addSession({ ts: new Date(date.getTime() + 3600e3).toISOString(), tool, preStress: pre, postStress: post,
+      addSession(uid, { ts: new Date(date.getTime() + 3600e3).toISOString(), tool, preStress: pre, postStress: post,
         helpful: pre - post >= 2 ? 1 : pre - post <= 0 ? -1 : 0, durationSec: 60 + Math.floor(r() * 300), note: null });
     }
   }
 
   const at = (daysAgo: number) => new Date(now.getTime() - daysAgo * 864e5).toISOString();
-  addMemory("trigger", "Several deadlines landing in the same week is what really gets me.", "user", at(27));
-  addMemory("helped", "A long walk outside, phone in pocket, reset the whole day.", "user", at(22));
-  addMemory("win", "Said no to an extra project and didn't feel guilty.", "user", at(15));
-  addMemory("note", "Mondays feel heavier when I don't plan the week on Sunday.", "user", at(9));
-  addCircle({ name: "Sam", relation: "Close friend", contact: null, note: "Good for a walk and a vent" });
-  addCircle({ name: "Mum", relation: "Family", contact: null, note: null });
-  saveSettings({ onboarded: true, mode, displayName: "", });
+  addMemory(uid, "trigger", "Several deadlines landing in the same week is what really gets me.", "user", at(27));
+  addMemory(uid, "helped", "A long walk outside, phone in pocket, reset the whole day.", "user", at(22));
+  addMemory(uid, "win", "Said no to an extra project and didn't feel guilty.", "user", at(15));
+  addMemory(uid, "note", "Mondays feel heavier when I don't plan the week on Sunday.", "user", at(9));
+  addCircle(uid, { name: "Sam", relation: "Close friend", contact: null, note: "Good for a walk and a vent" });
+  addCircle(uid, { name: "Mum", relation: "Family", contact: null, note: null });
+  saveSettings(uid, { onboarded: true, mode, displayName: "" });
 }

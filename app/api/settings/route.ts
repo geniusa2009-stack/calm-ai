@@ -1,9 +1,10 @@
 import { saveSettings } from "@/lib/db";
-import { handle, int, oneOf, str } from "@/lib/validate";
+import { route } from "@/lib/http";
+import { int, oneOf, str } from "@/lib/validate";
 import type { Mode, Settings } from "@/lib/types";
 import { REGIONS } from "@/lib/safety";
 
-export const POST = handle(async (req) => {
+export const POST = route(async (req, { user }) => {
   const b = await req.json();
   const p: Partial<Settings> = {};
   if (b.mode !== undefined) p.mode = oneOf(b.mode, "mode", ["everyday", "study", "work", "activity", "recovery"] as Mode[]);
@@ -14,5 +15,5 @@ export const POST = handle(async (req) => {
   for (const k of ["onboarded", "nudgesEnabled", "companionEnabled", "companionUsesContext"] as const) {
     if (typeof b[k] === "boolean") p[k] = b[k];
   }
-  saveSettings(p);
+  saveSettings(user.id, p);
 });

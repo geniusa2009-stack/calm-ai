@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { snapshot } from "@/lib/snapshot";
+import { requireUser } from "@/lib/session";
 import { PulseRing, STATE_COLOR, LineChart, Legend } from "@/components/charts";
 import { Welcome } from "@/components/Welcome";
 import { DemoBanner } from "@/components/DemoBanner";
@@ -13,12 +14,13 @@ function greeting(name: string) {
   return name ? `${part}, ${name}` : part;
 }
 
-export default function Today() {
-  const s = snapshot();
+export default async function Today() {
+  const user = await requireUser();
+  const s = snapshot(user.id);
   if (!s.settings.onboarded) return <Welcome />;
   const { pulse, radar, recommendations, nudges, mode } = s;
   const top = recommendations[0];
-  const isDemo = s.checkins.some((c) => c.source === "demo");
+  const isDemo = user.isDemo;
   const today = localDate(new Date());
   const week = s.days.filter((d) => daysBetween(d.date, today) < 14);
   const b = pulse.baseline;

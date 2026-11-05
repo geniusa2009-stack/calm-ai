@@ -12,12 +12,11 @@ export function Welcome() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function start(demo: boolean) {
+  async function start() {
     setBusy(true); setErr(null);
     try {
-      if (demo) await api("/api/demo", "POST", { mode });
       await api("/api/settings", "POST", { onboarded: true, mode, displayName: name });
-      router.push(demo ? "/" : "/check-in");
+      router.push("/check-in");
       router.refresh();
     } catch (e) { setErr((e as Error).message); setBusy(false); }
   }
@@ -43,12 +42,11 @@ export function Welcome() {
         </div>
       </div>
       <div className="card stack">
-        <h2>How would you like to start?</h2>
+        <h2>Ready when you are</h2>
         <div className="row">
-          <button className="btn big" disabled={busy} onClick={() => start(false)}>Start fresh with my first check-in</button>
-          <button className="btn ghost big" disabled={busy} onClick={() => start(true)}>Explore with 6 weeks of demo data</button>
+          <button className="btn big" disabled={busy} onClick={start}>Start with my first check-in</button>
         </div>
-        <p className="faint">Your data stays in this app&apos;s local database. Demo data is clearly labelled and can be wiped in Settings.</p>
+        <p className="faint">Your data is stored under your account only. You can export or delete it at any time in Settings.</p>
         {err && <p role="alert" style={{ color: "var(--strain)" }}>{err}</p>}
       </div>
     </div>

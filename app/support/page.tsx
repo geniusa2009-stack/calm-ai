@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { snapshot } from "@/lib/snapshot";
+import { requireUser } from "@/lib/session";
 import { DemoBanner } from "@/components/DemoBanner";
 
 export const dynamic = "force-dynamic";
 
-export default function SupportPage() {
-  const s = snapshot();
+export default async function SupportPage() {
+  const user = await requireUser();
+  const s = snapshot(user.id);
   const recs = s.recommendations;
   return (
     <div className="stack" style={{ gap: 20 }}>
-      {s.checkins.some((c) => c.source === "demo") && <DemoBanner />}
+      {user.isDemo && <DemoBanner />}
       <div className="head">
         <h1>Support</h1>
         <p>Ranked for how you&apos;re doing right now ({s.pulse.label.toLowerCase()}), the time of day, your mode, and — most of all — what has actually helped <em>you</em> before. Rate each session afterwards and the ranking keeps learning.</p>

@@ -2,14 +2,16 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { toolById } from "@/lib/engine/support";
 import { snapshot } from "@/lib/snapshot";
+import { requireUser } from "@/lib/session";
 import { Runner } from "./Runner";
 
 export const dynamic = "force-dynamic";
 
-export default function ToolPage({ params }: { params: { tool: string } }) {
-  const tool = toolById(params.tool);
+export default async function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
+  const user = await requireUser();
+  const tool = toolById((await params).tool);
   if (!tool) notFound();
-  const s = snapshot();
+  const s = snapshot(user.id);
   const last = s.checkins.at(-1);
   const rec = s.recommendations.find((r) => r.tool.id === tool.id)!;
   return (

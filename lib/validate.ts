@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 export class BadRequest extends Error {}
 
 export function int(v: unknown, name: string, lo: number, hi: number, optional = false): number | null {
@@ -34,18 +32,4 @@ export function str(v: unknown, name: string, max: number, optional = false): st
 export function oneOf<T extends string>(v: unknown, name: string, options: readonly T[]): T {
   if (typeof v !== "string" || !options.includes(v as T)) throw new BadRequest(`${name} must be one of ${options.join(", ")}`);
   return v as T;
-}
-
-export function handle(fn: (req: Request) => Promise<unknown> | unknown) {
-  return async (req: Request) => {
-    try {
-      const out = await fn(req);
-      return out instanceof Response ? out : NextResponse.json(out ?? { ok: true });
-    } catch (e) {
-      if (e instanceof BadRequest) return NextResponse.json({ error: e.message }, { status: 400 });
-      if (e instanceof SyntaxError) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-      console.error(e);
-      return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
-    }
-  };
 }

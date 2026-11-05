@@ -1,4 +1,5 @@
 import { patternsSnapshot } from "@/lib/snapshot";
+import { requireUser } from "@/lib/session";
 import { insightFeedback } from "@/lib/db";
 import { tagEffects, sleepLinks, weekdayPatterns } from "@/lib/engine/context";
 import { toolEfficacy, toolById } from "@/lib/engine/support";
@@ -9,9 +10,10 @@ import { InsightFeedback } from "./InsightFeedback";
 export const dynamic = "force-dynamic";
 const short = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-export default function PatternsPage() {
-  const s = patternsSnapshot();
-  const fb = insightFeedback();
+export default async function PatternsPage() {
+  const user = await requireUser();
+  const s = patternsSnapshot(user.id);
+  const fb = insightFeedback(user.id);
   const days = s.days.slice(-42);
   const b = s.pulse.baseline;
   const effects = tagEffects(s.days);
@@ -31,7 +33,7 @@ export default function PatternsPage() {
 
   return (
     <div className="stack" style={{ gap: 20 }}>
-      {s.checkins.some((c) => c.source === "demo") && <DemoBanner />}
+      {user.isDemo && <DemoBanner />}
       <div className="head">
         <h1>Patterns</h1>
         <p>What Calm has learned about you so far. These are associations from your own check-ins — useful hints, not diagnoses or proven causes. Tell Calm when something doesn&apos;t fit.</p>

@@ -1,12 +1,14 @@
-import { listMemories, listCheckIns } from "@/lib/db";
+import { listMemories } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { MemoryClient } from "./MemoryClient";
 import { DemoBanner } from "@/components/DemoBanner";
 
 export const dynamic = "force-dynamic";
 
-export default function MemoryPage() {
-  const memories = listMemories();
-  const demo = listCheckIns(60).some((c) => c.source === "demo");
+export default async function MemoryPage() {
+  const user = await requireUser();
+  const memories = listMemories(user.id);
+  const demo = user.isDemo;
   return (
     <div className="stack" style={{ maxWidth: 760 }}>
       {demo && <DemoBanner />}

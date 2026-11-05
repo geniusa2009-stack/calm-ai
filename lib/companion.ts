@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { addCompanion, getSettings, listCheckIns, listCompanion, listMemories, listSessions } from "./db";
+import { addCompanion, getSettings, listCheckIns, listCompanion, listMemories, listSessions, type UserId } from "./db";
 import { buildSummary } from "./summary";
 import { CRISIS_MESSAGE, crisisResources, detectCrisis, type Resource } from "./safety";
 import { MODES } from "./modes";
@@ -30,39 +30,39 @@ Boundaries:
 
 export interface CompanionReply { content: string; flagged: boolean; resources?: Resource[]; configured: boolean }
 
-export async function companionReply(userText: string): Promise<CompanionReply> {
+export async function companionReply(uid: UserId, userText: string): Promise<CompanionReply> {
   const text = userText.trim().slice(0, 4000);
-  const settings = getSettings();
+  const settings = getSettings(uid);
 
   // 1. Deterministic safety check — always runs, before and independent of any model.
   if (detectCrisis(text)) {
-    addCompanion("user", text, true);
-    addCompanion("assistant", CRISIS_MESSAGE, true);
+    addCompanion(uid, "user", text, true);
+    addCompanion(uid, "assistant", CRISIS_MESSAGE, true);
     return { content: CRISIS_MESSAGE, flagged: true, resources: crisisResources(settings.region), configured: companionConfigured() };
   }
 
-  addCompanion("user", text);
+  addCompanion(uid, "user", text);
 
   // 2. No credentials: be explicit rather than pretending.
   if (!companionConfigured()) {
     const msg = "The AI companion isn't switched on for this installation yet — the server has no ANTHROPIC_API_KEY set. " +
       "Everything else in Calm (your pulse, radar, patterns and support tools) works without it. " +
       "If you'd like something right now, a two-minute reset or box breathing from the Support tab is a good place to start.";
-    addCompanion("assistant", msg);
+    addCompanion(uid, "assistant", msg);
     return { content: msg, flagged: false, configured: false };
   }
 
   // 3. Build context (only if the person allowed it in settings).
   let context = `Current mode: ${MODES[settings.mode].label}. Tone: ${MODES[settings.mode].tone}.`;
   if (settings.companionUsesContext) {
-    const s = buildSummary(listCheckIns(60), listSessions(90), listMemories());
+    const s = buildSummary(listCheckIns(uid, 60), listSessions(uid, 90), listMemories(uid));
     context += `\n\nWhat Calm currently knows about this person (from their own check-ins):\n${s.text}`;
   } else {
     context += "\n\nThe person has chosen not to share their wellbeing data with the companion. Don't refer to patterns.";
   }
   if (settings.displayName) context += `\nThey'd like to be called ${settings.displayName}.`;
 
-  const history = listCompanion(20)
+  const history = listCompanion(uid, 20)
     .filter((m) => !m.flagged)
     .map((m) => ({ role: m.role, content: m.content }) as Anthropic.Beta.BetaMessageParam);
   // The API requires the conversation to start with a user turn.
@@ -86,20 +86,20 @@ export async function companionReply(userText: string): Promise<CompanionReply> 
 
     if (msg.stop_reason === "refusal") {
       const content = "I'm not able to help with that one here. If things feel heavy, the Support tab or someone in your trusted circle might be a better next step.";
-      addCompanion("assistant", content);
+      addCompanion(uid, "assistant", content);
       return { content, flagged: false, configured: true };
     }
     const content = msg.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim() ||
       "I'm here. Want to tell me a little more?";
-    addCompanion("assistant", content);
+    addCompanion(uid, "assistant", content);
     return { content, flagged: false, configured: true };
   } catch (err) {
     let content = "The companion couldn't respond just now. Your support tools are still available in the Support tab.";
     if (err instanceof Anthropic.AuthenticationError) content = "The companion's API key was rejected by the server, so it can't respond. Everything else in Calm still works.";
     else if (err instanceof Anthropic.RateLimitError) content = "The companion is getting too many requests right now — try again in a minute.";
     else if (err instanceof Anthropic.APIConnectionError) content = "The companion couldn't reach the AI service (network issue). Try again shortly.";
-    console.error("[companion]", err);
-    addCompanion("assistant", content);
+    console.error("[companion]", err instanceof Error ? `${err.name}: ${err.message}` : "unknown error");
+    addCompanion(uid, "assistant", content);
     return { content, flagged: false, configured: true };
   }
 }

@@ -1,11 +1,13 @@
 import { listCheckIns } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { groupByDay } from "@/lib/engine/days";
 import { LabClient } from "./LabClient";
 
 export const dynamic = "force-dynamic";
 
-export default function LabPage() {
-  const days = groupByDay(listCheckIns());
+export default async function LabPage() {
+  const user = await requireUser();
+  const days = groupByDay(listCheckIns(user.id));
   const freq = new Map<string, number>();
   days.forEach((d) => d.tags.forEach((t) => freq.set(t, (freq.get(t) ?? 0) + 1)));
   const tags = [...freq.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 12);

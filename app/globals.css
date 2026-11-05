@@ -108,7 +108,7 @@ main { padding: 36px 40px 80px; max-width: 1040px; width: 100%; }
 .pill.notice { background: var(--care-soft); color: var(--stretch); }
 .pill.positive { background: var(--celebrate-soft); color: var(--bright); }
 
-input[type="text"], input[type="number"], textarea, select {
+input[type="text"], input[type="number"], input[type="password"], textarea, select {
   font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%;
 }
 textarea { resize: vertical; min-height: 80px; }

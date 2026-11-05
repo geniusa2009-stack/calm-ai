@@ -2,7 +2,8 @@ process.env.CALM_DB_PATH = ":memory:";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { detectCrisis, crisisResources } from "../lib/safety";
-import { addCheckIn, exportAll, getSettings, listCheckIns, saveSettings, wipeAll, normalizeTag } from "../lib/db";
+import { addCheckIn, exportAll, getSettings, listCheckIns, saveSettings, wipeUserData, normalizeTag, useDatabase } from "../lib/db";
+import { createDemoUser, register } from "../lib/auth";
 import { seedDemo } from "../lib/seed";
 import { snapshot } from "../lib/snapshot";
 import { companionReply } from "../lib/companion";
@@ -28,22 +29,25 @@ test("tags are normalised", () => {
   assert.equal(normalizeTag("  Late Screens! "), "late-screens");
 });
 
-test("check-ins round-trip; settings persist; wipe clears", () => {
-  wipeAll();
-  addCheckIn({ mood: 6, energy: 5, stress: 4, focus: null, sleepHours: 7.5, sleepQuality: 4, tags: ["Exercise", "exercise"], note: null, mode: "everyday" });
-  const [c] = listCheckIns();
+test("check-ins round-trip; settings persist; wipe clears", async () => {
+  useDatabase();
+  const u = await register("roundtrip@example.com", "correct horse battery");
+  addCheckIn(u.id, { mood: 6, energy: 5, stress: 4, focus: null, sleepHours: 7.5, sleepQuality: 4, tags: ["Exercise", "exercise"], note: null, mode: "everyday" });
+  const [c] = listCheckIns(u.id);
   assert.deepEqual(c.tags, ["exercise"]);
-  saveSettings({ mode: "study", displayName: "Ari" });
-  assert.equal(getSettings().mode, "study");
-  assert.equal(exportAll().checkins.length, 1);
-  wipeAll();
-  assert.equal(listCheckIns().length, 0);
-  assert.equal(getSettings().mode, "everyday");
+  saveSettings(u.id, { mode: "study", displayName: "Ari" });
+  assert.equal(getSettings(u.id).mode, "study");
+  assert.equal(exportAll(u.id).checkins.length, 1);
+  wipeUserData(u.id);
+  assert.equal(listCheckIns(u.id).length, 0);
+  assert.equal(getSettings(u.id).mode, "everyday");
 });
 
-test("demo seed yields an established, explainable snapshot", () => {
-  seedDemo("work");
-  const s = snapshot();
+test("demo seed yields an established, explainable snapshot in a demo account", () => {
+  useDatabase();
+  const demo = createDemoUser();
+  seedDemo(demo.id, "work");
+  const s = snapshot(demo.id);
   assert.equal(s.pulse.stage, "established");
   assert.ok(s.radar.ready);
   assert.ok(s.recommendations.length > 0);
@@ -51,11 +55,13 @@ test("demo seed yields an established, explainable snapshot", () => {
 });
 
 test("companion: crisis text is handled without any model call; missing key is explicit", async () => {
+  useDatabase();
+  const u = await register("companion@example.com", "correct horse battery");
   delete process.env.ANTHROPIC_API_KEY; delete process.env.ANTHROPIC_AUTH_TOKEN;
-  const crisis = await companionReply("I want to die");
+  const crisis = await companionReply(u.id, "I want to die");
   assert.equal(crisis.flagged, true);
   assert.ok(crisis.resources && crisis.resources.length > 0);
-  const normal = await companionReply("Rough day at work");
+  const normal = await companionReply(u.id, "Rough day at work");
   assert.equal(normal.configured, false);
   assert.match(normal.content, /ANTHROPIC_API_KEY/);
 });

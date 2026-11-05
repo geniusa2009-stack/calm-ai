@@ -1,12 +1,14 @@
 import { snapshot } from "@/lib/snapshot";
 import { listCircle } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { crisisResources } from "@/lib/safety";
 import { CircleClient } from "./CircleClient";
 
 export const dynamic = "force-dynamic";
 
-export default function CirclePage() {
-  const s = snapshot();
+export default async function CirclePage() {
+  const user = await requireUser();
+  const s = snapshot(user.id);
   const resources = crisisResources(s.settings.region);
   return (
     <div className="stack" style={{ gap: 20, maxWidth: 820 }}>
@@ -17,7 +19,7 @@ export default function CirclePage() {
 
       <section className="card stack" aria-labelledby="tc-h">
         <h2 id="tc-h">Trusted circle</h2>
-        <CircleClient circle={listCircle()} />
+        <CircleClient circle={listCircle(user.id)} />
       </section>
 
       <section className="card stack" aria-labelledby="pb-h" style={s.suggestProfessional ? { borderColor: "var(--stretch)" } : undefined}>

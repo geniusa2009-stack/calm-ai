@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getSettings, listCompanion } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { companionConfigured } from "@/lib/companion";
 import { Chat } from "./Chat";
 
 export const dynamic = "force-dynamic";
 
-export default function CompanionPage() {
-  const s = getSettings();
+export default async function CompanionPage() {
+  const user = await requireUser();
+  const s = getSettings(user.id);
   if (!s.companionEnabled) {
     return (
       <div className="stack" style={{ maxWidth: 680 }}>
@@ -21,7 +23,7 @@ export default function CompanionPage() {
         <h1>Companion</h1>
         <p>An optional space to talk things through. {s.companionUsesContext ? "It can see a short summary of your patterns and pinned memories so it can be specific to you." : "You've chosen not to share your patterns with it."} <Link href="/settings">Change</Link></p>
       </div>
-      <Chat initial={listCompanion(40).map((m) => ({ role: m.role, content: m.content }))} configured={companionConfigured()} />
+      <Chat initial={listCompanion(user.id, 40).map((m) => ({ role: m.role, content: m.content }))} configured={companionConfigured()} />
     </div>
   );
 }

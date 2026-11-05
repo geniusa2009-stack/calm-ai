@@ -1,10 +1,18 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { migrate } from "./migrations";
 import type {
   CheckIn, CircleContact, CompanionMessage, Memory, MemoryKind, NewCheckIn,
   Settings, SupportSession, ToolId,
 } from "./types";
+
+/**
+ * Data access. ISOLATION RULE: every function that touches personal data takes
+ * the owning user's id first, and every SQL statement — reads, updates AND
+ * deletes-by-id — is constrained by `user_id = ?`. Never add a query without it.
+ */
+export type UserId = number;
 
 const DEFAULT_SETTINGS: Settings = {
   mode: "everyday",
@@ -18,82 +26,30 @@ const DEFAULT_SETTINGS: Settings = {
   region: "US",
 };
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS checkins (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts TEXT NOT NULL,
-  mood INTEGER NOT NULL CHECK (mood BETWEEN 1 AND 10),
-  energy INTEGER NOT NULL CHECK (energy BETWEEN 1 AND 10),
-  stress INTEGER NOT NULL CHECK (stress BETWEEN 1 AND 10),
-  focus INTEGER CHECK (focus BETWEEN 1 AND 10),
-  sleep_hours REAL CHECK (sleep_hours BETWEEN 0 AND 16),
-  sleep_quality INTEGER CHECK (sleep_quality BETWEEN 1 AND 5),
-  tags TEXT NOT NULL DEFAULT '[]',
-  note TEXT,
-  mode TEXT NOT NULL DEFAULT 'everyday',
-  source TEXT NOT NULL DEFAULT 'manual'
-);
-CREATE INDEX IF NOT EXISTS idx_checkins_ts ON checkins(ts);
-CREATE TABLE IF NOT EXISTS support_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts TEXT NOT NULL,
-  tool TEXT NOT NULL,
-  pre_stress INTEGER NOT NULL,
-  post_stress INTEGER,
-  helpful INTEGER,
-  duration_sec INTEGER NOT NULL DEFAULT 0,
-  note TEXT
-);
-CREATE TABLE IF NOT EXISTS memories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts TEXT NOT NULL,
-  kind TEXT NOT NULL,
-  text TEXT NOT NULL,
-  pinned INTEGER NOT NULL DEFAULT 0,
-  source TEXT NOT NULL DEFAULT 'user'
-);
-CREATE TABLE IF NOT EXISTS circle (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  relation TEXT NOT NULL,
-  contact TEXT,
-  note TEXT
-);
-CREATE TABLE IF NOT EXISTS companion_messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts TEXT NOT NULL,
-  role TEXT NOT NULL,
-  content TEXT NOT NULL,
-  flagged INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS insight_feedback (
-  key TEXT PRIMARY KEY,
-  rating INTEGER NOT NULL,
-  ts TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-`;
-
 let _db: Database.Database | null = null;
+
+function open(file: string) {
+  const d = new Database(file);
+  d.pragma("journal_mode = WAL");
+  d.pragma("foreign_keys = ON");
+  d.pragma("busy_timeout = 5000");
+  migrate(d);
+  return d;
+}
 
 export function db(): Database.Database {
   if (_db) return _db;
   const file = process.env.CALM_DB_PATH || path.join(process.cwd(), "data", "calm.db");
   if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
-  _db = new Database(file);
-  _db.pragma("journal_mode = WAL");
-  _db.pragma("foreign_keys = ON");
-  _db.exec(SCHEMA);
+  _db = open(file);
   return _db;
 }
 
-/** Test helper: swap in an isolated database. */
-export function useDatabase(instance: Database.Database) {
-  instance.exec(SCHEMA);
-  _db = instance;
+/** Test helper: swap in an isolated (usually in-memory) database. */
+export function useDatabase(file = ":memory:") {
+  _db?.close();
+  _db = open(file);
+  return _db;
 }
 
 // ---------- check-ins ----------
@@ -109,23 +65,24 @@ const toCheckIn = (r: CheckInRow): CheckIn => ({
   note: r.note, mode: r.mode as CheckIn["mode"], source: r.source as CheckIn["source"],
 });
 
-export function listCheckIns(sinceDays = 120): CheckIn[] {
+export function listCheckIns(uid: UserId, sinceDays = 120): CheckIn[] {
   const since = new Date(Date.now() - sinceDays * 864e5).toISOString();
-  return (db().prepare("SELECT * FROM checkins WHERE ts >= ? ORDER BY ts ASC").all(since) as CheckInRow[]).map(toCheckIn);
+  return (db().prepare("SELECT * FROM checkins WHERE user_id = ? AND ts >= ? ORDER BY ts ASC").all(uid, since) as CheckInRow[]).map(toCheckIn);
 }
 
-export function addCheckIn(c: NewCheckIn, source: CheckIn["source"] = "manual"): CheckIn {
+export function addCheckIn(uid: UserId, c: NewCheckIn, source: CheckIn["source"] = "manual"): CheckIn {
   const ts = c.ts ?? new Date().toISOString();
   const tags = Array.from(new Set(c.tags.map(normalizeTag).filter(Boolean)));
   const info = db().prepare(
-    `INSERT INTO checkins (ts, mood, energy, stress, focus, sleep_hours, sleep_quality, tags, note, mode, source)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-  ).run(ts, c.mood, c.energy, c.stress, c.focus, c.sleepHours, c.sleepQuality, JSON.stringify(tags), c.note, c.mode, source);
-  return toCheckIn(db().prepare("SELECT * FROM checkins WHERE id = ?").get(info.lastInsertRowid) as CheckInRow);
+    `INSERT INTO checkins (user_id, ts, mood, energy, stress, focus, sleep_hours, sleep_quality, tags, note, mode, source)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).run(uid, ts, c.mood, c.energy, c.stress, c.focus, c.sleepHours, c.sleepQuality, JSON.stringify(tags), c.note, c.mode, source);
+  return toCheckIn(db().prepare("SELECT * FROM checkins WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as CheckInRow);
 }
 
-export function deleteCheckIn(id: number) {
-  db().prepare("DELETE FROM checkins WHERE id = ?").run(id);
+/** Returns true only if a row owned by `uid` was deleted. */
+export function deleteCheckIn(uid: UserId, id: number) {
+  return db().prepare("DELETE FROM checkins WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
 
 export function normalizeTag(t: string) {
@@ -142,16 +99,16 @@ const toSession = (r: SessionRow): SupportSession => ({
   helpful: r.helpful as SupportSession["helpful"], durationSec: r.duration_sec, note: r.note,
 });
 
-export function listSessions(sinceDays = 180): SupportSession[] {
+export function listSessions(uid: UserId, sinceDays = 180): SupportSession[] {
   const since = new Date(Date.now() - sinceDays * 864e5).toISOString();
-  return (db().prepare("SELECT * FROM support_sessions WHERE ts >= ? ORDER BY ts ASC").all(since) as SessionRow[]).map(toSession);
+  return (db().prepare("SELECT * FROM support_sessions WHERE user_id = ? AND ts >= ? ORDER BY ts ASC").all(uid, since) as SessionRow[]).map(toSession);
 }
 
-export function addSession(s: Omit<SupportSession, "id" | "ts"> & { ts?: string }): SupportSession {
+export function addSession(uid: UserId, s: Omit<SupportSession, "id" | "ts"> & { ts?: string }): SupportSession {
   const info = db().prepare(
-    `INSERT INTO support_sessions (ts, tool, pre_stress, post_stress, helpful, duration_sec, note) VALUES (?,?,?,?,?,?,?)`,
-  ).run(s.ts ?? new Date().toISOString(), s.tool, s.preStress, s.postStress, s.helpful, s.durationSec, s.note);
-  return toSession(db().prepare("SELECT * FROM support_sessions WHERE id = ?").get(info.lastInsertRowid) as SessionRow);
+    `INSERT INTO support_sessions (user_id, ts, tool, pre_stress, post_stress, helpful, duration_sec, note) VALUES (?,?,?,?,?,?,?,?)`,
+  ).run(uid, s.ts ?? new Date().toISOString(), s.tool, s.preStress, s.postStress, s.helpful, s.durationSec, s.note);
+  return toSession(db().prepare("SELECT * FROM support_sessions WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as SessionRow);
 }
 
 // ---------- memories ----------
@@ -160,88 +117,104 @@ const toMemory = (r: MemoryRow): Memory => ({
   id: r.id, ts: r.ts, kind: r.kind as MemoryKind, text: r.text, pinned: !!r.pinned, source: r.source as Memory["source"],
 });
 
-export function listMemories(): Memory[] {
-  return (db().prepare("SELECT * FROM memories ORDER BY pinned DESC, ts DESC").all() as MemoryRow[]).map(toMemory);
+export function listMemories(uid: UserId): Memory[] {
+  return (db().prepare("SELECT * FROM memories WHERE user_id = ? ORDER BY pinned DESC, ts DESC").all(uid) as MemoryRow[]).map(toMemory);
 }
-export function addMemory(kind: MemoryKind, text: string, source: Memory["source"] = "user", ts?: string): Memory {
-  const info = db().prepare("INSERT INTO memories (ts, kind, text, source) VALUES (?,?,?,?)")
-    .run(ts ?? new Date().toISOString(), kind, text.slice(0, 1000), source);
-  return toMemory(db().prepare("SELECT * FROM memories WHERE id = ?").get(info.lastInsertRowid) as MemoryRow);
+export function addMemory(uid: UserId, kind: MemoryKind, text: string, source: Memory["source"] = "user", ts?: string): Memory {
+  const info = db().prepare("INSERT INTO memories (user_id, ts, kind, text, source) VALUES (?,?,?,?,?)")
+    .run(uid, ts ?? new Date().toISOString(), kind, text.slice(0, 1000), source);
+  return toMemory(db().prepare("SELECT * FROM memories WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as MemoryRow);
 }
-export function updateMemory(id: number, patch: { pinned?: boolean; text?: string }) {
-  if (patch.pinned !== undefined) db().prepare("UPDATE memories SET pinned = ? WHERE id = ?").run(patch.pinned ? 1 : 0, id);
-  if (patch.text !== undefined) db().prepare("UPDATE memories SET text = ? WHERE id = ?").run(patch.text.slice(0, 1000), id);
+export function updateMemory(uid: UserId, id: number, patch: { pinned?: boolean; text?: string }) {
+  let changed = 0;
+  if (patch.pinned !== undefined) changed += db().prepare("UPDATE memories SET pinned = ? WHERE id = ? AND user_id = ?").run(patch.pinned ? 1 : 0, id, uid).changes;
+  if (patch.text !== undefined) changed += db().prepare("UPDATE memories SET text = ? WHERE id = ? AND user_id = ?").run(patch.text.slice(0, 1000), id, uid).changes;
+  return changed > 0;
 }
-export function deleteMemory(id: number) {
-  db().prepare("DELETE FROM memories WHERE id = ?").run(id);
+export function deleteMemory(uid: UserId, id: number) {
+  return db().prepare("DELETE FROM memories WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
 
 // ---------- circle ----------
-export function listCircle(): CircleContact[] {
-  return db().prepare("SELECT * FROM circle ORDER BY id").all() as CircleContact[];
+export function listCircle(uid: UserId): CircleContact[] {
+  return db().prepare("SELECT id, name, relation, contact, note FROM circle WHERE user_id = ? ORDER BY id").all(uid) as CircleContact[];
 }
-export function addCircle(c: Omit<CircleContact, "id">) {
-  db().prepare("INSERT INTO circle (name, relation, contact, note) VALUES (?,?,?,?)").run(c.name, c.relation, c.contact, c.note);
+export function addCircle(uid: UserId, c: Omit<CircleContact, "id">) {
+  db().prepare("INSERT INTO circle (user_id, name, relation, contact, note) VALUES (?,?,?,?,?)").run(uid, c.name, c.relation, c.contact, c.note);
 }
-export function deleteCircle(id: number) {
-  db().prepare("DELETE FROM circle WHERE id = ?").run(id);
+export function deleteCircle(uid: UserId, id: number) {
+  return db().prepare("DELETE FROM circle WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
 
 // ---------- companion ----------
-export function listCompanion(limit = 60): CompanionMessage[] {
-  const rows = db().prepare("SELECT * FROM companion_messages ORDER BY id DESC LIMIT ?").all(limit) as
+export function listCompanion(uid: UserId, limit = 60): CompanionMessage[] {
+  const rows = db().prepare("SELECT id, ts, role, content, flagged FROM companion_messages WHERE user_id = ? ORDER BY id DESC LIMIT ?").all(uid, limit) as
     { id: number; ts: string; role: string; content: string; flagged: number }[];
   return rows.reverse().map((r) => ({ ...r, role: r.role as CompanionMessage["role"], flagged: !!r.flagged }));
 }
-export function addCompanion(role: CompanionMessage["role"], content: string, flagged = false) {
-  db().prepare("INSERT INTO companion_messages (ts, role, content, flagged) VALUES (?,?,?,?)")
-    .run(new Date().toISOString(), role, content, flagged ? 1 : 0);
+export function addCompanion(uid: UserId, role: CompanionMessage["role"], content: string, flagged = false) {
+  db().prepare("INSERT INTO companion_messages (user_id, ts, role, content, flagged) VALUES (?,?,?,?,?)")
+    .run(uid, new Date().toISOString(), role, content, flagged ? 1 : 0);
 }
-export function clearCompanion() {
-  db().prepare("DELETE FROM companion_messages").run();
+export function clearCompanion(uid: UserId) {
+  db().prepare("DELETE FROM companion_messages WHERE user_id = ?").run(uid);
 }
 
 // ---------- insight feedback ----------
-export function insightFeedback(): Record<string, number> {
-  const rows = db().prepare("SELECT key, rating FROM insight_feedback").all() as { key: string; rating: number }[];
+export function insightFeedback(uid: UserId): Record<string, number> {
+  const rows = db().prepare("SELECT key, rating FROM insight_feedback WHERE user_id = ?").all(uid) as { key: string; rating: number }[];
   return Object.fromEntries(rows.map((r) => [r.key, r.rating]));
 }
-export function setInsightFeedback(key: string, rating: number) {
-  db().prepare("INSERT INTO insight_feedback (key, rating, ts) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET rating = excluded.rating, ts = excluded.ts")
-    .run(key, rating, new Date().toISOString());
+export function setInsightFeedback(uid: UserId, key: string, rating: number) {
+  db().prepare(`INSERT INTO insight_feedback (user_id, key, rating, ts) VALUES (?,?,?,?)
+                ON CONFLICT(user_id, key) DO UPDATE SET rating = excluded.rating, ts = excluded.ts`)
+    .run(uid, key, rating, new Date().toISOString());
 }
 
 // ---------- settings ----------
-export function getSettings(): Settings {
-  const rows = db().prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[];
-  const stored = Object.fromEntries(rows.map((r) => [r.key, JSON.parse(r.value)]));
+export function getSettings(uid: UserId): Settings {
+  const rows = db().prepare("SELECT key, value FROM settings WHERE user_id = ?").all(uid) as { key: string; value: string }[];
+  const stored = Object.fromEntries(rows.filter((r) => r.key in DEFAULT_SETTINGS).map((r) => [r.key, JSON.parse(r.value)]));
   return { ...DEFAULT_SETTINGS, ...stored };
 }
-export function saveSettings(patch: Partial<Settings>) {
-  const stmt = db().prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
-  const tx = db().transaction((p: Partial<Settings>) => {
-    for (const [k, v] of Object.entries(p)) if (k in DEFAULT_SETTINGS && v !== undefined) stmt.run(k, JSON.stringify(v));
-  });
-  tx(patch);
+export function saveSettings(uid: UserId, patch: Partial<Settings>) {
+  const stmt = db().prepare(`INSERT INTO settings (user_id, key, value) VALUES (?, ?, ?)
+                             ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`);
+  db().transaction((p: Partial<Settings>) => {
+    for (const [k, v] of Object.entries(p)) if (k in DEFAULT_SETTINGS && v !== undefined) stmt.run(uid, k, JSON.stringify(v));
+  })(patch);
 }
 
 // ---------- data rights ----------
-export function exportAll() {
+const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings"] as const;
+
+/** Everything Calm holds about one user. Never includes credentials or session tokens. */
+export function exportAll(uid: UserId) {
+  const account = db().prepare("SELECT email, is_demo, created_at FROM users WHERE id = ?").get(uid) as
+    { email: string | null; is_demo: number; created_at: string } | undefined;
   return {
     exportedAt: new Date().toISOString(),
-    settings: getSettings(),
-    checkins: listCheckIns(100000),
-    supportSessions: listSessions(100000),
-    memories: listMemories(),
-    circle: listCircle(),
-    companion: listCompanion(100000),
-    insightFeedback: insightFeedback(),
+    account: account ? { email: account.email, demo: !!account.is_demo, createdAt: account.created_at } : null,
+    settings: getSettings(uid),
+    checkins: listCheckIns(uid, 100000),
+    supportSessions: listSessions(uid, 100000),
+    memories: listMemories(uid),
+    circle: listCircle(uid),
+    companion: listCompanion(uid, 100000),
+    insightFeedback: insightFeedback(uid),
   };
 }
 
-export function wipeAll(keepSettings = false) {
-  const d = db();
-  d.exec(`DELETE FROM checkins; DELETE FROM support_sessions; DELETE FROM memories; DELETE FROM circle;
-          DELETE FROM companion_messages; DELETE FROM insight_feedback;`);
-  if (!keepSettings) d.exec("DELETE FROM settings;");
+/** Delete all of one user's wellbeing data (the account itself remains). */
+export function wipeUserData(uid: UserId, keepSettings = false) {
+  db().transaction(() => {
+    for (const t of USER_TABLES) {
+      if (keepSettings && t === "settings") continue;
+      db().prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(uid);
+    }
+  })();
+}
+
+export function countUserRows(uid: UserId) {
+  return Object.fromEntries(USER_TABLES.map((t) => [t, (db().prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE user_id = ?`).get(uid) as { n: number }).n]));
 }

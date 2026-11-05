@@ -1,4 +1,4 @@
-import { getSettings, insightFeedback, listCheckIns, listCircle, listMemories, listSessions } from "./db";
+import { getSettings, insightFeedback, listCheckIns, listCircle, listMemories, listSessions, type UserId } from "./db";
 import { groupByDay, daysBetween, localDate } from "./engine/days";
 import { computePulse } from "./engine/pulse";
 import { scanRadar, type Signal } from "./engine/radar";
@@ -16,10 +16,10 @@ function inQuietHours(s: Settings, hour: number) {
 }
 
 /** Everything the app needs to render "today", computed once per request. */
-export function snapshot(now = new Date()) {
-  const settings = getSettings();
-  const checkins = listCheckIns(120);
-  const sessions = listSessions(180);
+export function snapshot(uid: UserId, now = new Date()) {
+  const settings = getSettings(uid);
+  const checkins = listCheckIns(uid, 120);
+  const sessions = listSessions(uid, 180);
   const days = groupByDay(checkins);
   const pulse = computePulse(days, now);
   const radar = scanRadar(days, now, MODES[settings.mode].radarSensitivity);
@@ -50,14 +50,14 @@ export function snapshot(now = new Date()) {
   };
 }
 
-export function patternsSnapshot(now = new Date()) {
-  const base = snapshot(now);
+export function patternsSnapshot(uid: UserId, now = new Date()) {
+  const base = snapshot(uid, now);
   return {
     ...base,
-    insights: weeklyInsights(base.days, base.sessions, insightFeedback(), now),
+    insights: weeklyInsights(base.days, base.sessions, insightFeedback(uid), now),
     recovery: recoveryProfile(base.days, base.sessions),
     series: strainSeries(base.days),
-    memories: listMemories(),
-    circle: listCircle(),
+    memories: listMemories(uid),
+    circle: listCircle(uid),
   };
 }
