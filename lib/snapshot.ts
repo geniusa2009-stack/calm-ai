@@ -1,5 +1,7 @@
 import { getSettings, insightFeedback, listCheckIns, listCircle, listMemories, listSessions, type UserId } from "./db";
 import { groupByDay, daysBetween, localDate } from "./engine/days";
+import { dailySignals, mergeSignals } from "./signals/daily";
+import { listReadings } from "./signals/store";
 import { computePulse } from "./engine/pulse";
 import { scanRadar, type Signal } from "./engine/radar";
 import { recommend } from "./engine/support";
@@ -20,7 +22,8 @@ export function snapshot(uid: UserId, now = new Date()) {
   const settings = getSettings(uid);
   const checkins = listCheckIns(uid, 120);
   const sessions = listSessions(uid, 180);
-  const days = groupByDay(checkins);
+  // Passive signals only fill missing self-reported sleep (see lib/signals/daily.ts).
+  const days = mergeSignals(groupByDay(checkins), dailySignals(listReadings(uid, 120)));
   const pulse = computePulse(days, now);
   const radar = scanRadar(days, now, MODES[settings.mode].radarSensitivity);
   const recommendations = recommend(pulse.state, sessions, settings.mode, now);

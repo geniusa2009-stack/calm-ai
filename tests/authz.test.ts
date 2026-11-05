@@ -11,7 +11,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { useDatabase, db, countUserRows, listMemories, listCheckIns } from "../lib/db";
 import { hashToken, register, createSession, userForToken, claimLegacy, login, SESSION_COOKIE } from "../lib/auth";
-import { migrate, LATEST_VERSION, LEGACY_EMAIL } from "../lib/migrations";
+import { migrate, LATEST_VERSION, LEGACY_EMAIL, MIGRATIONS } from "../lib/migrations";
 
 const ROOT = path.join(__dirname, "..");
 const ORIGIN = "http://calm.test";
@@ -294,7 +294,8 @@ test("migration: a pre-auth database is upgraded in place; data goes to a locked
   const d = legacyDb();
   migrate(d);
   const versions = (d.prepare("SELECT version FROM schema_migrations ORDER BY version").all() as { version: number }[]).map((r) => r.version);
-  assert.deepEqual(versions, [1, LATEST_VERSION]);
+  assert.deepEqual(versions, MIGRATIONS.map((m) => m.version));
+  assert.equal(versions.at(-1), LATEST_VERSION);
   const legacy = d.prepare("SELECT * FROM users WHERE is_legacy = 1").get() as { id: number; password_hash: string | null; email: string };
   assert.equal(legacy.password_hash, null, "legacy owner can never log in");
   assert.equal(legacy.email, LEGACY_EMAIL);
@@ -306,7 +307,7 @@ test("migration: a pre-auth database is upgraded in place; data goes to a locked
     assert.ok(fks.some((f) => f.table === "users" && f.on_delete === "CASCADE"), `${t} cascades`);
   }
   migrate(d); // idempotent
-  assert.equal((d.prepare("SELECT COUNT(*) AS n FROM schema_migrations").get() as { n: number }).n, 2);
+  assert.equal((d.prepare("SELECT COUNT(*) AS n FROM schema_migrations").get() as { n: number }).n, MIGRATIONS.length);
   await assert.rejects(async () => { useDatabase(); await login(LEGACY_EMAIL, ""); });
 });
 

@@ -1,63 +1,76 @@
 # Calm
 
-A prototype of a personal wellbeing tool. It learns what *your* usual looks like, notices slow drifts away from it, and suggests support that has actually worked for *you*.
+A prototype for personal wellbeing tracking. It learns what *your* usual looks like from short check-ins, notices slow drifts away from it, and suggests support that has actually worked for *you*. It is not a diagnosis tool, a medical device, or a crisis service, and it makes no claim of clinical validity.
 
-It isn't a meditation library, a chatbot, or a diagnosis tool. It never compares you to anyone else.
+**Status:** a working multi-user prototype. It has **not** been security-reviewed or validated on real users. See `SECURITY.md` and `docs/ENGINE_AUDIT.md`.
 
-## Running it
+## Run it locally
+
+Requires Node 20+ (tested on Node 22). On Linux, `better-sqlite3` builds natively, so you need the usual build tools.
 
 ```bash
 npm install
+npm test               # typecheck isn't included; run `npm run typecheck` too
 npm run dev            # http://localhost:3000
-npm test               # 25 engine, safety and data tests
+# or, production mode:
 npm run build && npm start
 ```
 
-When you first open it, you choose between starting fresh and loading six weeks of **demo data**. Demo data is clearly labelled and can be wiped in Settings. To seed it from the command line instead, run `npm run seed`.
+Open the app. You can **create an account**, or click **Try the demo** for a throwaway account with six weeks of made-up data (deleted after 48 hours).
 
-**Optional AI companion:** set `ANTHROPIC_API_KEY` (see `.env.example`). Without a key the rest of the app works fully. The companion says plainly that it isn't configured, and the safety responses still work.
+Optional environment variables (see `.env.example`; put real values in `.env`, which is git-ignored):
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | Turns on the AI companion. Everything else works without it. |
+| `CALM_COMPANION_MODEL` | Override the companion model (default `claude-opus-5-5`). |
+| `CALM_DB_PATH` | SQLite file (default `./data/calm.db`, git-ignored). |
+| `CALM_TRUST_PROXY=1` | Trust `X-Forwarded-For` for rate limiting. Only set this behind a proxy you control. |
+| `CALM_INSECURE_COOKIES=1` | Drop the `Secure` cookie flag in production mode for plain-HTTP testing on a non-localhost host. |
+
+Other scripts:
+- `npm run seed`: create a demo account from the CLI.
+- `npm run claim-legacy -- you@example.com`: move data from the old single-user version into a registered account.
+- `npx tsx scripts/audit-engine.ts`: re-run the engine measurements.
+
+Schema migrations run automatically on startup.
 
 ## What's in it
 
-| Feature | Where | How it works |
-|---|---|---|
-| **Calm Pulse** | Today | Your recent state compared with your own baseline. It shows a state label, a 0–100 gauge (60 = your usual), the main drivers, and how confident the read is. |
-| **Personal baseline** | `lib/engine/baseline.ts` | Robust median and spread over a trailing 35-day window. The last 3 days are left out so a current shift doesn't become the new "normal". A population prior covers the first days and fades out completely by day 21. |
-| **Early Shift Radar** | Today | Multi-day checks: stress staying high, sleep slipping, energy falling while stress rises, mood swings, a quiet mood slide, bouncing back, and check-in gaps. Each signal shows its evidence and why it might matter. |
-| **Context intelligence** | Patterns | How tags affect you on the same day and the next day. An effect has to pass a Welch t-test before it's shown, and next-day effects need stronger evidence. Also covers the sleep link and weekday rhythm. |
-| **Recovery tracking** | Patterns | Finds harder stretches, measures how long you take to come back, and looks for what tends to be present when you recover. |
-| **Support Engine / Calm Window** | Support | 8 tools: three breathing patterns, 5-4-3-2-1 grounding, a two-minute reset, a generated soundscape, wind-down and reflection. They're ranked by how well they fit your current state, the time of day, your mode, and your own results so far. You rate stress before and after each session. |
-| **Adaptive feedback** | everywhere | Session results re-rank tools. Insight "doesn't fit" hides that insight. A clear win is saved to Memory automatically. |
-| **Personal Memory** | Memory | Things that help, triggers, wins and notes. Pinned items are what the companion sees. |
-| **Weekly insights** | Patterns | Up to 6 cards, each with a confidence level, re-ranked by your feedback. |
-| **What-If Lab** | Lab | Cautious estimates built only from your own patterns. Effects are shrunk, capped at ±2 and given a range, and the page says plainly that these are associations, not proven causes. |
-| **Modes** | Settings | Everyday, Study, Work, Activity and Recovery. Each changes the suggested tags, preferred tools, how many nudges you get, radar sensitivity, and the companion's tone. |
-| **Smart nudges** | Today | In-app only. They respect quiet hours and are capped per mode. |
-| **Trusted Circle & Professional Bridge** | Circle & help | Your own contacts with copyable messages (Calm never contacts anyone). If 2 weeks stay hard, it gently suggests a professional and offers a self-reported summary you can choose to share. |
-| **AI companion** | Companion | Claude (`claude-opus-5-5`, low effort, server-side refusal fallback). Guardrails: not a therapist, no diagnosis, no medication advice. Whether it sees your data is your choice. |
-| **Data rights** | Settings | Export everything as JSON, or delete everything. |
+| Area | Where |
+|---|---|
+| **Accounts and sessions**: scrypt passwords, hashed session tokens, CSRF checks, throttling, password change, account deletion | `lib/auth.ts`, `lib/http.ts`, `lib/session.ts`, `app/api/auth/*` |
+| **Per-user data isolation** on every table and query | `lib/db.ts`, `lib/migrations.ts` |
+| **Calm Pulse**: state relative to your own baseline, with drivers and a confidence heuristic | `lib/engine/pulse.ts`, `baseline.ts` |
+| **Early Shift Radar**: multi-day shifts scaled to your own variability, plus long-horizon drift | `lib/engine/radar.ts` |
+| **Context patterns**: Welch t-tests with Benjamini–Hochberg FDR | `lib/engine/context.ts`, `stats.ts` |
+| **Recovery tracking**, with check-in gaps flagged as uncertain | `lib/engine/recovery.ts` |
+| **Support Engine / Calm Window**: 8 tools, ranked by personal efficacy | `lib/engine/support.ts`, `app/support` |
+| **Weekly insights** with "does this fit?" feedback, **What-If Lab**, **Personal Memory** | `lib/engine/insights.ts`, `whatif.ts`, `app/memory` |
+| **Modes**, **smart nudges**, **Trusted Circle**, **Professional Bridge** | `lib/modes.ts`, `lib/snapshot.ts`, `app/circle` |
+| **AI companion** with guardrails, optional | `lib/companion.ts` |
+| **Safety layer**: deterministic crisis detection that runs before any model call | `lib/safety.ts` |
+| **Passive signals**: provider interface, validated JSON import, demo provider | `lib/signals/*`, see `docs/SIGNALS.md` |
+| **Data rights**: export, wipe data, delete account | `app/api/export`, `app/api/reset`, `app/api/account` |
 
-## Safety
+## Tests
 
-`lib/safety.ts` runs **before** any model call, on companion messages and on check-in notes. It doesn't depend on an API key. If it detects crisis language, it shows region-specific crisis lines plus findahelpline.com, and the companion doesn't try to coach. Tests cover the obvious true positives and common figures of speech like "this deadline is killing me".
+`npm test` runs 74 tests:
+- **Engine:** baselines, pulse, radar, context, recovery, support, what-if and insights.
+- **Scenarios:** stable, noisy, abrupt, gradual, missing data, leakage and ordering, all on seeded synthetic data.
+- **Security:** route-coverage scan, 401 on every protected handler, cross-user read/update/delete attempts, CSRF, sessions, throttling, deletion cascade, demo separation, migrations.
+- **Signals:** validation, duplicates, corrections, out-of-order and delayed data, overlap, timezone, isolation.
 
-## Architecture
+## Docs
 
-```
-app/            Next.js 14 app-router pages + /api routes (validated JSON)
-lib/db.ts       SQLite (better-sqlite3), schema + data access
-lib/engine/     pure, tested functions: days → baseline → pulse/radar/context/recovery/support/insights/what-if
-lib/snapshot.ts composes engine output for a page render
-lib/companion.ts, lib/safety.ts, lib/summary.ts, lib/seed.ts
-tests/          node:test via tsx
-```
-
-The engine modules are pure functions over a list of `Day` records, so they're easy to test and to move (to a mobile client, for example).
+- `SECURITY.md`: security model, findings and fixes, known gaps.
+- `docs/ENGINE_AUDIT.md`: measured false-alarm and detection rates, statistical limitations.
+- `docs/SIGNALS.md`: what is and isn't integrated, the import format, how to add a provider.
 
 ## Known limitations
 
-- Single user with no authentication. Meant to run locally or behind your own auth.
-- Days are grouped using the server's timezone.
-- Notifications are in-app only. No push or wearable integrations yet.
-- The statistics are deliberately simple and explainable. With a few weeks of data, some "early hint" associations will be chance.
-- This is not a medical device. It doesn't diagnose and it isn't a crisis service.
+- **Not clinically validated.** The thresholds were tuned on synthetic data only.
+- **No live wearable integrations.** There's file import and a demo provider only.
+- **Time zones:** check-in days are grouped in the **server's** time zone. Wearable readings can carry a device offset, but check-ins can't yet.
+- **Deployment:** single process with SQLite. No email verification, password reset or MFA, and no scheduled sync jobs.
+- **Notifications** are in-app only.

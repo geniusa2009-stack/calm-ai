@@ -1,5 +1,6 @@
 import { createDemoUser, createSession, destroySession } from "@/lib/auth";
 import { seedDemo } from "@/lib/seed";
+import { syncProvider } from "@/lib/signals/sync";
 import { json, route, sessionCookie } from "@/lib/http";
 import { oneOf } from "@/lib/validate";
 import type { Mode } from "@/lib/types";
@@ -11,6 +12,7 @@ export const POST = route({ public: true }, async (req, { token }) => {
   destroySession(token);
   const user = createDemoUser();
   seedDemo(user.id, mode);
+  await syncProvider(user, "demo"); // synthetic wearable data, demo accounts only
   const s = createSession(user.id, true);
   return json({ ok: true }, { headers: { "set-cookie": sessionCookie(s.token, s.expires) } });
 });

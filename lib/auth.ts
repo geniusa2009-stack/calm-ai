@@ -202,7 +202,7 @@ export function claimLegacy(targetEmail: string) {
   const legacy = db().prepare("SELECT id FROM users WHERE is_legacy = 1").get() as { id: number } | undefined;
   if (!legacy) throw new AuthError("There is no legacy data to claim.");
   db().transaction(() => {
-    for (const t of ["checkins", "support_sessions", "memories", "circle", "companion_messages"]) {
+    for (const t of ["checkins", "support_sessions", "memories", "circle", "companion_messages", "signal_readings"]) {
       db().prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(target.id, legacy.id);
     }
     // keyed tables: the target's own values win on conflict

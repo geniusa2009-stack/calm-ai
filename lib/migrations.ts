@@ -144,6 +144,35 @@ export const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 3,
+    name: "passive signals: provider-agnostic readings",
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE signal_readings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL,
+          external_id TEXT NOT NULL,        -- source id, or a content hash; makes re-delivery idempotent
+          kind TEXT NOT NULL,
+          value REAL NOT NULL,              -- canonical unit (see lib/signals/types.ts)
+          start_ts TEXT NOT NULL,
+          end_ts TEXT NOT NULL,
+          tz_offset_min INTEGER,
+          received_at TEXT NOT NULL,
+          UNIQUE (user_id, provider, external_id)
+        );
+        CREATE INDEX idx_signal_user_kind_end ON signal_readings(user_id, kind, end_ts);
+        CREATE TABLE signal_connections (
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL,
+          last_sync_at TEXT,
+          last_report TEXT,
+          PRIMARY KEY (user_id, provider)
+        );
+      `);
+    },
+  },
 ];
 
 export function migrate(db: Database.Database) {

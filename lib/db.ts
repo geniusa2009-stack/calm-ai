@@ -186,7 +186,7 @@ export function saveSettings(uid: UserId, patch: Partial<Settings>) {
 }
 
 // ---------- data rights ----------
-const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings"] as const;
+const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings", "signal_readings", "signal_connections"] as const;
 
 /** Everything Calm holds about one user. Never includes credentials or session tokens. */
 export function exportAll(uid: UserId) {
@@ -202,6 +202,7 @@ export function exportAll(uid: UserId) {
     circle: listCircle(uid),
     companion: listCompanion(uid, 100000),
     insightFeedback: insightFeedback(uid),
+    signalReadings: db().prepare("SELECT provider, external_id AS externalId, kind, value, start_ts AS start, end_ts AS \"end\", tz_offset_min AS tzOffsetMinutes, received_at AS receivedAt FROM signal_readings WHERE user_id = ? ORDER BY end_ts").all(uid),
   };
 }
 
