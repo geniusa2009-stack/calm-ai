@@ -6,6 +6,7 @@ import { companionConfigured } from "@/lib/companion";
 import { Chat } from "./Chat";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Companion" };
 
 export default async function CompanionPage() {
   const user = await requireUser();

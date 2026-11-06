@@ -12,20 +12,28 @@
     "seed": "tsx scripts/seed.ts",
     "claim-legacy": "tsx scripts/claim-legacy.ts",
     "e2e": "node e2e/ui.e2e.cjs",
-    "test:tz": "for z in UTC Africa/Cairo America/Los_Angeles Pacific/Kiritimati; do echo \"== TZ=$z\"; TZ=$z npm test --silent >/dev/null 2>&1 && echo pass || { echo FAIL; exit 1; }; done"
+    "test:tz": "for z in UTC Africa/Cairo America/Los_Angeles Pacific/Kiritimati; do echo \"== TZ=$z\"; TZ=$z npm test --silent >/dev/null 2>&1 && echo pass || { echo FAIL; exit 1; }; done",
+    "e2e:a11y": "node e2e/a11y.e2e.cjs",
+    "e2e:theme": "node e2e/theme.e2e.cjs",
+    "e2e:compat": "node e2e/compat.e2e.cjs",
+    "push:sweep": "tsx scripts/push-sweep.ts",
+    "push:keys": "tsx scripts/vapid-keys.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
     "better-sqlite3": "^13.0.3",
     "next": "^15.5.29",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
+    "axe-core": "^4.14.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },

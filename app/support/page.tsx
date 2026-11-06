@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { DemoBanner } from "@/components/DemoBanner";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Support" };
 
 export default async function SupportPage() {
   const user = await requireUser();

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Sign in" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   if (await currentUser()) redirect("/");

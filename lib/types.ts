@@ -87,6 +87,10 @@ export interface Settings {
   theme: ThemePref;
   /** IANA zone, e.g. "Africa/Cairo". "" = not set yet (UTC is used until it is). */
   timezone: string;
+  /** Push reminder categories and the local hour for the check-in reminder. */
+  pushCheckin: boolean;
+  pushRadar: boolean;
+  reminderHour: number;
 }
 
 export type ThemePref = "system" | "light" | "dark";

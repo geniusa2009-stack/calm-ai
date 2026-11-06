@@ -59,7 +59,8 @@ export interface Reading {
   tzOffsetMinutes: number | null;
 }
 
-export type ProviderStatus = "implemented" | "demo" | "not-implemented";
+/** implemented: works here · oauth: implemented, needs server credentials + user consent · demo · not-implemented */
+export type ProviderStatus = "implemented" | "oauth" | "demo" | "not-implemented";
 
 export interface SyncContext { userId: number; since: Date; until: Date; isDemoAccount: boolean }
 

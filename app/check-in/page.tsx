@@ -5,6 +5,7 @@ import { CheckInForm } from "./CheckInForm";
 import { round } from "@/lib/engine/stats";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Check in" };
 
 export default async function CheckInPage() {
   const user = await requireUser();

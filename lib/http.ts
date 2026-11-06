@@ -74,8 +74,15 @@ export function route(a: Handler<Ctx> | { public: true }, b?: Handler<PublicCtx>
       if (!isPublic && !user) return json({ error: "Please sign in" }, { status: 401 });
       const out = await fn(req, { user, token } as Ctx | PublicCtx);
       if (out instanceof Response) {
-        out.headers.set("cache-control", "no-store");
-        return out;
+        try {
+          out.headers.set("cache-control", "no-store");
+          return out;
+        } catch {
+          // Response.redirect() and fetch() responses have immutable headers: copy them.
+          const headers = new Headers(out.headers);
+          headers.set("cache-control", "no-store");
+          return new Response(out.body, { status: out.status, statusText: out.statusText, headers });
+        }
       }
       return json(out ?? { ok: true });
     } catch (e) {

@@ -6,6 +6,7 @@ import { groupByDay } from "@/lib/engine/days";
 import { LabClient } from "./LabClient";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "What-If Lab" };
 
 export default async function LabPage() {
   const user = await requireUser();

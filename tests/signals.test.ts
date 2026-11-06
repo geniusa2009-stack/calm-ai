@@ -148,6 +148,7 @@ test("merge: self-reported sleep wins; wearable sleep only fills gaps; signals n
 test("providers: registry is honest — only file import is implemented, demo is demo-only, the rest can't run", async () => {
   const byStatus = (st: string) => PROVIDERS.filter((p) => p.status === st).map((p) => p.id);
   assert.deepEqual(byStatus("implemented"), ["file-import"]);
+  assert.deepEqual(byStatus("oauth"), ["oura"]); // real code path, but needs credentials + consent; not a pull provider
   assert.deepEqual(byStatus("demo"), ["demo"]);
   for (const p of PROVIDERS.filter((x) => x.status === "not-implemented")) {
     assert.equal(p.fetchReadings, undefined, `${p.id} must not pretend to fetch data`);
@@ -155,7 +156,8 @@ test("providers: registry is honest — only file import is implemented, demo is
   }
   const real = await register("prov@example.com", "correct horse battery");
   await assert.rejects(syncProvider(real, "demo"), /demo account/);
-  await assert.rejects(syncProvider(real, "oura"), /isn't available/);
+  await assert.rejects(syncProvider(real, "garmin"), /isn't available/);
+  await assert.rejects(syncProvider(real, "oura"), /doesn't sync|isn't available/); // OAuth providers sync via lib/integrations
   await assert.rejects(syncProvider(real, "nope"), /Unknown provider/);
   const demo = createDemoUser();
   const r = await syncProvider(demo, "demo");

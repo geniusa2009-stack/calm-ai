@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session";
 import { DeviceSetupFlow } from "./DeviceSetup";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Optional setup" };
 
 export default async function DeviceSetupPage({ searchParams }: { searchParams: Promise<{ restart?: string }> }) {
   const user = await requireUser();

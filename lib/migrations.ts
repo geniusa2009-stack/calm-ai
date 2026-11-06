@@ -182,6 +182,58 @@ export const MIGRATIONS: Migration[] = [
       db.exec("ALTER TABLE support_sessions ADD COLUMN tz TEXT;");
     },
   },
+  {
+    version: 5,
+    name: "integrations + push: provider OAuth connections, OAuth states, push subscriptions and deliveries",
+    up: (db) => {
+      db.exec(`
+        -- One row per user per OAuth provider. Tokens are AES-256-GCM encrypted (lib/secrets.ts).
+        CREATE TABLE provider_connections (
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL,
+          status TEXT NOT NULL,                 -- connected | reauth_required | error
+          access_token_enc TEXT,
+          refresh_token_enc TEXT,
+          expires_at TEXT,
+          scope TEXT,
+          connected_at TEXT NOT NULL,
+          last_sync_at TEXT,
+          last_error TEXT,                      -- short code only, never a provider payload
+          PRIMARY KEY (user_id, provider)
+        );
+        -- Pending authorisations. The state value itself is never stored, only its hash.
+        CREATE TABLE oauth_states (
+          state_hash TEXT PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider TEXT NOT NULL,
+          verifier_enc TEXT NOT NULL,
+          redirect_uri TEXT NOT NULL,
+          expires_at TEXT NOT NULL
+        );
+        CREATE TABLE push_subscriptions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          endpoint TEXT NOT NULL UNIQUE,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          last_success_at TEXT,
+          failures INTEGER NOT NULL DEFAULT 0,
+          user_agent TEXT
+        );
+        CREATE INDEX idx_push_user ON push_subscriptions(user_id);
+        -- What was sent, to prevent duplicates (one per user, kind and LOCAL date).
+        CREATE TABLE push_deliveries (
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL,
+          local_date TEXT NOT NULL,
+          sent_at TEXT NOT NULL,
+          outcome TEXT NOT NULL,
+          PRIMARY KEY (user_id, kind, local_date)
+        );
+      `);
+    },
+  },
 ];
 
 export function migrate(db: Database.Database) {

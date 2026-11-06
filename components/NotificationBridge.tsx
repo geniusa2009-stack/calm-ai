@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { notificationState, showNotification } from "@/lib/device/capabilities";
 import { pickReminders, REMINDER_TEXT, type NudgeKind } from "@/lib/device/reminders";
+import { hasPushSubscription } from "@/lib/push/client";
 
 const CHECK_EVERY_MS = 30 * 60e3;
 
@@ -14,12 +15,14 @@ const CHECK_EVERY_MS = 30 * 60e3;
 export function NotificationBridge() {
   useEffect(() => {
     let stopped = false;
-    const key = () => `calm.reminded.${new Date().toISOString().slice(0, 10)}`;
+    // Keyed by the LOCAL date in the browser's zone (not UTC), so the daily cap resets at local midnight.
+    const key = () => `calm.reminded.${new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())}`;
     const read = (): string[] => { try { return JSON.parse(localStorage.getItem(key()) || "[]"); } catch { return []; } };
     const write = (ids: string[]) => { try { localStorage.setItem(key(), JSON.stringify(ids)); } catch { /* storage unavailable */ } };
 
     async function check() {
       if (stopped || notificationState() !== "granted") return;
+      if (await hasPushSubscription()) return; // server push handles this device; avoid duplicates
       try {
         const res = await fetch("/api/nudges", { cache: "no-store" });
         if (!res.ok) return;

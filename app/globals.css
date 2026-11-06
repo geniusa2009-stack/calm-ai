@@ -45,6 +45,9 @@
   --stretch-text: color-mix(in srgb, var(--stretch) 50%, var(--ink));
   --strain-text: color-mix(in srgb, var(--strain) 72%, var(--ink));
   --danger-bg: color-mix(in srgb, var(--strain) 80%, var(--ink));
+  --calm-text: color-mix(in srgb, var(--calm) 62%, var(--ink));
+  --low-text: color-mix(in srgb, var(--low) 68%, var(--ink));
+  --bright-text: color-mix(in srgb, var(--bright) 55%, var(--ink));
 
   /* type */
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -165,7 +168,8 @@ html.theme-switching, html.theme-switching *, html.theme-switching *::before, ht
 
 @media (prefers-reduced-motion: reduce) {
   :root { --dur-fast: 1ms; --dur: 1ms; --dur-slow: 1ms; --dur-pulse: 1ms; --rise: 0px; }
-  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+  /* Delays too: otherwise staggered content would stay invisible for up to ~280ms. */
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; }
 }
 
 /* ---------- base ---------- */
@@ -183,6 +187,9 @@ body {
 }
 a { color: var(--link); text-decoration: none; text-underline-offset: 3px; }
 a:hover { text-decoration: underline; }
+/* Links inside running text are underlined so they are not identified by colour alone (WCAG 1.4.1). */
+:is(p, li, dd, .lead, .muted, .faint, .notice-body) a:not(.btn):not(.chip) { text-decoration: underline; text-decoration-thickness: 1px; }
+:is(p, li, dd, .lead, .muted, .faint, .notice-body) a:not(.btn):not(.chip):hover { text-decoration-thickness: 2px; }
 h1, h2, h3 { line-height: var(--lh-tight); margin: 0 0 0.4em; font-weight: 650; letter-spacing: -0.015em; }
 h1 { font-size: var(--fs-2xl); }
 h2 { font-size: var(--fs-lg); }
@@ -300,8 +307,8 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .chip:active { transform: scale(0.96); }
 .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; font-weight: 700; padding: 2px 9px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-.pill.high, .pill.ok { background: var(--accent-soft); color: var(--accent); }
-.pill.medium { background: var(--info-soft); color: var(--low); }
+.pill.high, .pill.ok { background: var(--accent-soft); color: var(--link); }
+.pill.medium { background: var(--info-soft); color: var(--low-text); }
 .pill.sev-act, .pill.bad { background: var(--care-soft); color: var(--strain-text); }
 .pill.sev-notice, .pill.warn { background: var(--warn-soft); color: var(--stretch-text); }
 .pill.sev-positive { background: var(--celebrate-soft); color: var(--bright); }
@@ -519,3 +526,27 @@ section[id] { scroll-margin-top: var(--s-6); }
 .segment-label { font-weight: 620; }
 .segment-hint { font-size: var(--fs-xs); color: var(--text-faint); }
 @media (max-width: 560px) { .segmented { grid-template-columns: 1fr; } }
+
+/* ---------- chart text alternative ---------- */
+figure.chart { margin: 0; }
+.chart-data { margin-top: var(--s-2); }
+.table-wrap { overflow-x: auto; max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); margin-top: var(--s-2); }
+.chart-data table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.chart-data th, .chart-data td { padding: 6px var(--s-3); text-align: left; border-bottom: 1px solid var(--line); }
+.chart-data thead th { position: sticky; top: 0; background: var(--surface-2); }
+.chart-data { max-width: 100%; min-width: 0; }
+.chart-data:not([open]) > .table-wrap { display: none; } /* closed disclosures must not widen the page */
+.chart-data .table-wrap { max-width: 100%; }
+/* WCAG 2.5.8: checkboxes are at least 24px on touch screens. */
+@media (pointer: coarse) { input[type="checkbox"]:not([role="switch"]) { width: 24px; height: 24px; } }
+/* A grid track of plain 1fr can be stretched by one wide child; minmax(0,1fr) keeps the page within the viewport. */
+@media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) {
+  .bottom-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .bottom-nav a, .bottom-nav button { min-width: 0; text-align: center; line-height: 1.15; overflow-wrap: anywhere; padding: 2px; }
+}
+.section-title { flex-wrap: wrap; }
+.perm-row { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 560px) { .perm-row { grid-template-columns: minmax(0, 1fr); } }
+.pill { white-space: normal; text-align: center; }
+main, dialog { overflow-wrap: break-word; } /* long words/paths/emails never force horizontal scrolling */

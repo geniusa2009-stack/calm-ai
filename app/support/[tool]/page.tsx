@@ -8,6 +8,10 @@ import { Runner } from "./Runner";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ tool: string }> }) {
+  return { title: toolById((await params).tool)?.name ?? "Support" };
+}
+
 export default async function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
   const user = await requireUser();
   const tool = toolById((await params).tool);

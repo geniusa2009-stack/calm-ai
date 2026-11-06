@@ -6,6 +6,7 @@ import { crisisResources } from "@/lib/safety";
 import { CircleClient } from "./CircleClient";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Circle & help" };
 
 export default async function CirclePage() {
   const user = await requireUser();

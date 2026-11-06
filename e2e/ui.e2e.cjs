@@ -55,7 +55,7 @@ async function newUser(browser, opts = {}, ctxOpts = {}) {
   await page.getByLabel("Email").fill(`e2e-${Date.now()}-${n++}@example.com`);
   await page.getByLabel(/Password/).fill("correct horse battery");
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.getByText("Welcome to Calm").waitFor();
+  await page.getByRole("heading", { name: "Welcome to Calm" }).waitFor();
   return { ctx, page, errors };
 }
 const calls = (page) => page.evaluate(() => window.__calls);

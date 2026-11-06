@@ -11,6 +11,7 @@ import { formatDay, localParts } from "@/lib/time";
 import { TimezoneSync } from "@/components/TimezoneSync";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: { absolute: "Today · Calm" } }; // template does not apply to the root segment
 
 function greeting(name: string, h: number) {
   const part = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";

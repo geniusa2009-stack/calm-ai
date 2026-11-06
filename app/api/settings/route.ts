@@ -21,8 +21,9 @@ export const POST = route(async (req, { user }) => {
     p.timezone = tz;
   }
   if (b.theme !== undefined) p.theme = oneOf(b.theme, "theme", THEMES);
+  if (b.reminderHour !== undefined) p.reminderHour = int(b.reminderHour, "reminderHour", 0, 23)!;
   if (b.deviceStep !== undefined) p.deviceStep = int(b.deviceStep, "deviceStep", 0, 20)!;
-  for (const k of ["onboarded", "nudgesEnabled", "companionEnabled", "companionUsesContext", "notifyEnabled", "wakeLockEnabled", "hapticsEnabled"] as const) {
+  for (const k of ["onboarded", "nudgesEnabled", "companionEnabled", "companionUsesContext", "notifyEnabled", "wakeLockEnabled", "hapticsEnabled", "pushCheckin", "pushRadar"] as const) {
     if (typeof b[k] === "boolean") p[k] = b[k];
   }
   saveSettings(user.id, p);

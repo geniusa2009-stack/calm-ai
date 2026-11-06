@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
+import { subscribePush } from "@/lib/push/client";
 import { Notice } from "@/components/ui";
 import {
   acquireWakeLock, HEALTH_NOTE, NOT_USED, notificationState, outcomeMessage, requestNotifications, tap,
@@ -59,6 +60,7 @@ export function DeviceSetupFlow({ initialStep, prefs }: { initialStep: number; p
     const { outcome } = await requestNotifications(); // the ONLY place a prompt can appear, after the click
     const granted = outcome === "granted" || outcome === "already-granted";
     if (granted !== on.notifyEnabled) { setOn({ ...on, notifyEnabled: granted }); await save({ notifyEnabled: granted }); }
+    if (granted) await subscribePush(); // server push where configured; otherwise in-tab reminders only
     setSupport((s) => s && { ...s, notif: notificationState() });
     setResult(outcomeMessage(outcome as RequestOutcome));
     setBusy(false);

@@ -33,7 +33,7 @@ const attr = (p) => p.evaluate(() => document.documentElement.getAttribute("data
   await p.getByLabel("Email").fill(email);
   await p.getByLabel(/Password/).fill("correct horse battery");
   await p.getByRole("button", { name: "Create account" }).click();
-  await p.getByText("Welcome to Calm").waitFor();
+  await p.getByRole("heading", { name: "Welcome to Calm" }).waitFor();
   await p.getByRole("button", { name: "Start with my first check-in" }).click();
   await p.waitForURL("**/check-in");
   await p.getByRole("button", { name: "Save check-in" }).click();

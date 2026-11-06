@@ -38,7 +38,7 @@ test("light theme uses the original palette exactly", () => {
 
 test("tokens added after the original are derived from original colours, not new hues", () => {
   const light = decls(block(":root {"));
-  for (const k of ["--bg-tint", "--surface-3", "--line-strong", "--accent-hover", "--accent-softer", "--warn-soft", "--focus", "--backdrop", "--text-faint", "--link", "--stretch-text", "--strain-text", "--danger-bg"]) {
+  for (const k of ["--bg-tint", "--surface-3", "--line-strong", "--accent-hover", "--accent-softer", "--warn-soft", "--focus", "--backdrop", "--text-faint", "--link", "--stretch-text", "--strain-text", "--danger-bg", "--calm-text", "--low-text", "--bright-text"]) {
     assert.ok(light[k], k);
     assert.doesNotMatch(light[k], /#[0-9a-f]{3,8}\b/i, `${k} must be derived via var()/color-mix, not a new hex`);
     assert.match(light[k], /var\(--/, k);
@@ -63,6 +63,7 @@ test("no hardcoded colours outside the token blocks (so every component follows 
     const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(d, e.name)] : []);
     for (const f of walk(path.join(ROOT, dir))) {
       if (f.endsWith(path.join("app", "layout.tsx"))) continue; // browser-chrome meta theme-color only
+      if (f.endsWith(path.join("app", "manifest.ts"))) continue; // web app manifest needs literal colours (read outside the page)
       assert.doesNotMatch(fs.readFileSync(f, "utf8"), /#[0-9a-fA-F]{6}\b|rgba?\(\d/, path.relative(ROOT, f));
     }
   }

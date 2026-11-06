@@ -9,8 +9,9 @@ import {
   type NotificationState,
 } from "@/lib/device/capabilities";
 import type { DeviceSetup } from "@/lib/types";
+import { hasPushSubscription, pushSupported, subscribePush, unsubscribePush } from "@/lib/push/client";
 
-interface Prefs { notifyEnabled: boolean; wakeLockEnabled: boolean; hapticsEnabled: boolean; deviceSetup: DeviceSetup }
+interface Prefs { notifyEnabled: boolean; wakeLockEnabled: boolean; hapticsEnabled: boolean; deviceSetup: DeviceSetup; pushCheckin: boolean; pushRadar: boolean; reminderHour: number }
 type Msg = { tone: "success" | "info" | "warn" | "error"; title: string; body: string } | null;
 
 const NOTIF_LABEL: Record<NotificationState, [string, string]> = {
@@ -29,9 +30,10 @@ export function DevicePermissions({ prefs }: { prefs: Prefs }) {
   const [vib, setVib] = useState<string | null>(null);
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
+  const [pushOn, setPushOn] = useState<boolean | null>(null);
 
   // Live browser state, read after mount. Reading never prompts.
-  const refresh = () => { setNotif(notificationState()); setWake(wakeLockState()); setVib(vibrationState()); };
+  const refresh = () => { setNotif(notificationState()); setWake(wakeLockState()); setVib(vibrationState()); hasPushSubscription().then(setPushOn); };
   useEffect(() => {
     refresh();
     // Pick up changes made in the browser's own site settings when the person comes back.
@@ -50,6 +52,7 @@ export function DevicePermissions({ prefs }: { prefs: Prefs }) {
     setMsg(null);
     if (!want) {
       await save({ notifyEnabled: false });
+      await unsubscribePush(); setPushOn(false);
       setMsg({ tone: "info", title: "Reminders off", body: "Calm won't send notifications. The browser permission itself stays as it is; you can revoke it in your browser's site settings." });
       return;
     }
@@ -58,6 +61,7 @@ export function DevicePermissions({ prefs }: { prefs: Prefs }) {
     setNotif(state);
     const granted = outcome === "granted" || outcome === "already-granted";
     await save({ notifyEnabled: granted });
+    if (granted) setPushOn((await subscribePush()) === "subscribed");
     setMsg(outcomeMessage(outcome));
     setBusy(false);
   }
@@ -114,6 +118,26 @@ export function DevicePermissions({ prefs }: { prefs: Prefs }) {
           </label>
         </div>
       </div>
+
+      {notifOn && (
+        <div className="stack" style={{ gap: 8 }} aria-label="Reminder preferences" role="group">
+          <span className="faint">
+            {pushOn ? "This device receives server push: reminders can arrive even when Calm is closed (where your browser and OS allow it)."
+              : pushSupported() ? "This device gets reminders only while Calm is open in a tab (push isn't set up on this server, or the browser declined a push subscription)."
+              : "This browser doesn't support push, so reminders arrive only while Calm is open in a tab."}
+          </span>
+          <label className="switch"><input type="checkbox" role="switch" checked={p.pushCheckin} onChange={(e) => save({ pushCheckin: e.target.checked })} /> Check-in reminder</label>
+          <label className="field" style={{ maxWidth: 220 }}>…not before (your local time)
+            <select value={p.reminderHour} onChange={(e) => save({ reminderHour: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}:00</option>)}</select>
+          </label>
+          <label className="switch"><input type="checkbox" role="switch" checked={p.pushRadar} onChange={(e) => save({ pushRadar: e.target.checked })} /> Heads-up when the radar notices a shift</label>
+          {pushOn && <div><button className="btn ghost small" onClick={async () => {
+            const r = await fetch("/api/push/test", { method: "POST" }); const j = await r.json().catch(() => ({}));
+            setMsg(r.ok ? { tone: j.sent ? "success" : "warn", title: j.sent ? "Test push sent" : "Couldn't deliver", body: j.sent ? "It should arrive within a minute. If not, check your system's notification settings and Focus / Do Not Disturb." : "Your browser's push service didn't accept it. Try turning reminders off and on again." }
+              : { tone: "warn", title: "Not sent", body: j.error ?? "Try again shortly." });
+          }}>Send a test push</button></div>}
+        </div>
+      )}
 
       {msg && <Notice tone={msg.tone} title={msg.title}>{msg.body}</Notice>}
 

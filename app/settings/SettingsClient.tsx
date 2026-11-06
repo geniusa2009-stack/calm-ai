@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { api, detectedTimeZone } from "@/lib/client";
+import { unsubscribePush } from "@/lib/push/client";
 import { MODES } from "@/lib/modes";
 import { REGIONS } from "@/lib/safety";
 import { Dialog } from "@/components/ui/Dialog";
@@ -23,7 +24,8 @@ export function SettingsClient({ settings, configured, isDemo, email, deviceSlot
   const [dangerErr, setDangerErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function signOut() { await api("/api/auth/logout", "POST"); router.push("/login"); router.refresh(); }
+  // Remove this device's push subscription first, so a shared device stops receiving reminders.
+  async function signOut() { await unsubscribePush(); await api("/api/auth/logout", "POST"); router.push("/login"); router.refresh(); }
 
   async function update(p: Partial<Settings>) {
     const prev = s;
@@ -88,7 +90,7 @@ export function SettingsClient({ settings, configured, isDemo, email, deviceSlot
         <div className="row">
           <a className="btn ghost" href="/api/export">Export everything (JSON)</a>
           {isDemo && <button className="btn ghost" onClick={async () => { await api("/api/demo", "POST", { mode: s.mode }); router.push("/"); router.refresh(); }}>Reset demo data</button>}
-          <button className="btn quiet" style={{ color: "var(--strain)" }} onClick={() => { setDangerErr(null); setWipeOpen(true); }}>Delete all my wellbeing data…</button>
+          <button className="btn quiet" style={{ color: "var(--strain-text)" }} onClick={() => { setDangerErr(null); setWipeOpen(true); }}>Delete all my wellbeing data…</button>
         </div>
       </section>
 
@@ -115,7 +117,7 @@ export function SettingsClient({ settings, configured, isDemo, email, deviceSlot
         )}
         {acctMsg && <Notice tone={acctMsg.error ? "error" : "success"}>{acctMsg.text}</Notice>}
         <hr className="divider" />
-        <div><button className="btn quiet" style={{ color: "var(--strain)" }} onClick={() => { setPw(""); setDangerErr(null); setDeleteOpen(true); }}>Delete my account…</button></div>
+        <div><button className="btn quiet" style={{ color: "var(--strain-text)" }} onClick={() => { setPw(""); setDangerErr(null); setDeleteOpen(true); }}>Delete my account…</button></div>
       </section>
 
       <Dialog open={wipeOpen} onClose={() => setWipeOpen(false)} title="Delete all your wellbeing data?" describedBy="wipe-desc">

@@ -50,10 +50,13 @@ const planned = (id: string, name: string, note: string): SignalProvider => ({
 export const PROVIDERS: SignalProvider[] = [
   fileImportProvider,
   demoProvider,
-  planned("apple-health", "Apple Health", "Not implemented. Needs a native iOS app (HealthKit has no web API)."),
-  planned("health-connect", "Health Connect (Android)", "Not implemented. Needs a native Android app."),
-  planned("oura", "Oura", "Not implemented. Would use OAuth2 + the Oura REST API; needs registered client credentials."),
-  planned("fitbit", "Fitbit", "Not implemented. Would use OAuth2 + the Fitbit Web API; needs registered client credentials."),
+  {
+    id: "oura", name: "Oura", status: "oauth", kinds: ["sleep", "resting_hr", "hrv_rmssd"],
+    description: "Connect with your Oura account (OAuth). Imports sleep periods, lowest heart rate and average HRV only. Needs Oura developer credentials on this server; not yet verified against Oura's live API.",
+  },
+  planned("apple-health", "Apple Health", "Not implemented. Requires a native iOS companion app (HealthKit has no web API). The data contract is defined; see docs/wearable-integrations.md."),
+  planned("health-connect", "Health Connect (Android)", "Not implemented. Requires a native Android companion app. The data contract is defined; see docs/wearable-integrations.md."),
+  planned("fitbit", "Fitbit", "Not implemented. The legacy Fitbit Web API was switched off in November 2026; its replacement, the Google Health API, requires Google's restricted-scope review."),
   planned("garmin", "Garmin", "Not implemented. Requires Garmin Health API partner approval."),
 ];
 

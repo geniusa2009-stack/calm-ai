@@ -8,9 +8,11 @@ import { PageHeader } from "@/components/ui";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { PROVIDERS } from "@/lib/signals/providers";
 import { connections } from "@/lib/signals/store";
+import { OAUTH_PROVIDERS, availability, connectionInfo } from "@/lib/integrations/oauth";
 import { resolveTimeZone, supportedTimeZones } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -30,8 +32,9 @@ export default async function SettingsPage() {
       </section>
       <SettingsClient
         settings={settings} configured={companionConfigured()} isDemo={user.isDemo} email={user.email} zones={supportedTimeZones()}
-        deviceSlot={<DevicePermissions prefs={{ notifyEnabled: settings.notifyEnabled, wakeLockEnabled: settings.wakeLockEnabled, hapticsEnabled: settings.hapticsEnabled, deviceSetup: settings.deviceSetup }} />}
-        signalsSlot={<SignalsClient providers={PROVIDERS.map(({ id, name, status, description }) => ({ id, name, status, description }))} conns={connections(user.id)} isDemo={user.isDemo} tz={resolveTimeZone(settings.timezone)} />}
+        deviceSlot={<DevicePermissions prefs={{ notifyEnabled: settings.notifyEnabled, wakeLockEnabled: settings.wakeLockEnabled, hapticsEnabled: settings.hapticsEnabled, deviceSetup: settings.deviceSetup, pushCheckin: settings.pushCheckin, pushRadar: settings.pushRadar, reminderHour: settings.reminderHour }} />}
+        signalsSlot={<SignalsClient providers={PROVIDERS.map(({ id, name, status, description }) => ({ id, name, status, description }))} conns={connections(user.id)} isDemo={user.isDemo} tz={resolveTimeZone(settings.timezone)}
+          oauth={Object.fromEntries(Object.values(OAUTH_PROVIDERS).map((p) => [p.id, { availability: availability(p), connection: connectionInfo(user.id).find((c) => c.provider === p.id) ?? null }]))} />}
       />
     </div>
   );

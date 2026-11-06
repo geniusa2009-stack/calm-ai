@@ -138,7 +138,7 @@ export async function changePassword(uid: UserId, current: unknown, next: unknow
 }
 
 /** Permanently delete the account. ON DELETE CASCADE removes every owned row and session. */
-export async function deleteAccount(uid: UserId, password: unknown) {
+export async function deleteAccount(uid: UserId, password: unknown, beforeDelete?: () => Promise<void>) {
   const row = db().prepare("SELECT * FROM users WHERE id = ?").get(uid) as UserRow | undefined;
   if (!row) throw new AuthError("Account not found.", 404);
   if (!row.is_demo) {
@@ -146,6 +146,8 @@ export async function deleteAccount(uid: UserId, password: unknown) {
       throw new AuthError("Password is incorrect.", 401);
     }
   }
+  // Runs only after the password check: revoke external grants, then cascade-delete everything.
+  if (beforeDelete) await beforeDelete();
   db().prepare("DELETE FROM users WHERE id = ?").run(uid);
 }
 

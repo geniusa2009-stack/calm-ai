@@ -31,6 +31,9 @@ const DEFAULT_SETTINGS: Settings = {
   deviceStep: 0,
   theme: "system",
   timezone: "",
+  pushCheckin: true,
+  pushRadar: true,
+  reminderHour: 19,
 };
 
 let _db: Database.Database | null = null;
@@ -193,7 +196,7 @@ export function saveSettings(uid: UserId, patch: Partial<Settings>) {
 }
 
 // ---------- data rights ----------
-const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings", "signal_readings", "signal_connections"] as const;
+const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings", "signal_readings", "signal_connections", "provider_connections", "oauth_states", "push_subscriptions", "push_deliveries"] as const;
 
 /** Everything Calm holds about one user. Never includes credentials or session tokens. */
 export function exportAll(uid: UserId) {

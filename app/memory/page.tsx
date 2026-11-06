@@ -6,6 +6,7 @@ import { MemoryClient } from "./MemoryClient";
 import { DemoBanner } from "@/components/DemoBanner";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Memory" };
 
 export default async function MemoryPage() {
   const user = await requireUser();

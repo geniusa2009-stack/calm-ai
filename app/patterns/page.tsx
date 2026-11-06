@@ -11,6 +11,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { InsightFeedback } from "./InsightFeedback";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Patterns" };
 const short = (d: string) => formatDay(d, { month: "short", day: "numeric" });
 
 export default async function PatternsPage() {
@@ -108,6 +109,7 @@ export default async function PatternsPage() {
       {eff.length > 0 && (
         <section className="card" aria-labelledby="eff-h">
           <h2 id="eff-h">What helps you</h2>
+          <div className="table-wrap" style={{ maxHeight: "none", border: 0 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
             <thead><tr style={{ textAlign: "left", color: "var(--ink-2)" }}><th scope="col">Tool</th><th scope="col">Sessions</th><th scope="col">Avg stress change</th><th scope="col">Found helpful</th></tr></thead>
             <tbody>
@@ -120,6 +122,7 @@ export default async function PatternsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </section>
       )}
     </div>

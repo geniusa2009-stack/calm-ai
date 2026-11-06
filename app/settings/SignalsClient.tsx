@@ -8,9 +8,11 @@ import { formatInstant } from "@/lib/time";
 interface P { id: string; name: string; status: ProviderStatus; description: string }
 interface C { provider: string; lastSyncAt: string | null; readings: number }
 
-const STATUS: Record<ProviderStatus, string> = { implemented: "Available", demo: "Demo only", "not-implemented": "Not available yet" };
+const STATUS: Record<ProviderStatus, string> = { implemented: "Available", oauth: "Account connection", demo: "Demo only", "not-implemented": "Not available yet" };
 
-export function SignalsClient({ providers, conns, isDemo, tz }: { providers: P[]; conns: C[]; isDemo: boolean; tz: string }) {
+export interface OAuthState { availability: "available" | "blocked_by_credentials" | "token_key_missing"; connection: { status: string; last_sync_at: string | null; last_error: string | null } | null }
+
+export function SignalsClient({ providers, conns, isDemo, tz, oauth = {} }: { providers: P[]; conns: C[]; isDemo: boolean; tz: string; oauth?: Record<string, OAuthState> }) {
   const router = useRouter();
   const [report, setReport] = useState<(IngestReport & { file: string }) | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -39,13 +41,27 @@ export function SignalsClient({ providers, conns, isDemo, tz }: { providers: P[]
         {providers.filter((p) => p.status !== "demo" || isDemo).map((p) => {
           const c = conns.find((x) => x.provider === p.id);
           return (
-            <div key={p.id} className="row between card tight" style={{ opacity: p.status === "not-implemented" ? 0.7 : 1 }}>
+            <div key={p.id} className="row between card tight" style={p.status === "not-implemented" ? { background: "var(--surface-2)" } : undefined}>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <strong>{p.name}</strong> <span className={`pill ${p.status === "implemented" ? "high" : ""}`}>{STATUS[p.status]}</span>
                 <div className="faint">{p.description}</div>
                 {c && <div className="faint">{c.readings} readings · last update {c.lastSyncAt ? formatInstant(c.lastSyncAt, tz, { dateStyle: "medium", timeStyle: "short" }) : "—"}</div>}
               </div>
               <div className="row" style={{ gap: 6 }}>
+                {p.status === "oauth" && (() => {
+                  const o = oauth[p.id];
+                  if (isDemo) return <span className="faint">Not in demo accounts</span>;
+                  if (!o || o.availability !== "available") return <span className="faint">{o?.availability === "token_key_missing" ? "Not set up on this server (token encryption key missing)" : "Not set up on this server (developer credentials missing)"}</span>;
+                  if (!o.connection) return <a className="btn small" href={`/api/integrations/${p.id}/connect`}>Connect {p.name}</a>;
+                  return (
+                    <>
+                      <span className={`pill ${o.connection.status === "connected" ? "ok" : "warn"}`}>{o.connection.status === "connected" ? "Connected" : "Reconnect needed"}</span>
+                      {o.connection.status !== "connected" && <a className="btn small" href={`/api/integrations/${p.id}/connect`}>Reconnect</a>}
+                      <button className="btn ghost small" onClick={async () => { const r = await fetch(`/api/integrations/${p.id}/sync`, { method: "POST" }); const j = await r.json().catch(() => ({})); if (!r.ok) setErr(j.error ?? "Sync failed"); else router.refresh(); }}>Sync now</button>
+                      <button className="btn ghost small" onClick={async () => { const del = window.confirm(`Also delete the data already imported from ${p.name}? (OK = delete, Cancel = keep)`); await fetch(`/api/integrations/${p.id}?deleteData=${del ? 1 : 0}`, { method: "DELETE" }); router.refresh(); }}>Disconnect</button>
+                    </>
+                  );
+                })()}
                 {p.id === "file-import" && <label className="btn ghost small" style={{ cursor: "pointer" }}>Import JSON<input type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} /></label>}
                 {c && c.readings > 0 && <button className="btn ghost small" onClick={async () => { await api(`/api/signals?provider=${p.id}`, "DELETE"); router.refresh(); }}>Remove data</button>}
               </div>

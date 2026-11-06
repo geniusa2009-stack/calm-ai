@@ -149,6 +149,7 @@ test("reduced motion: stylesheet collapses durations and swaps movement for a fa
   assert.match(blocks, /--dur: 1ms/);
   assert.match(blocks, /--rise: 0px/);
   assert.match(blocks, /animation-name: fade-in/);
+  assert.match(blocks, /animation-delay: 0ms !important/, "staggered content must not stay hidden under reduced motion");
   assert.match(blocks, /\.skeleton::after \{ animation: none; \}/);
 });
 
