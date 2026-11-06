@@ -1,5 +1,6 @@
 import type { Day } from "./days";
-import { addDays, daysBetween } from "./days";
+import { addDays, daysBetween, localDate } from "./days";
+import { FALLBACK_TZ } from "../time";
 import type { SupportSession } from "../types";
 import { strainSeries } from "./pulse";
 import { mean, median, round } from "./stats";
@@ -30,7 +31,7 @@ const START = 1.2, END = 0.5, SEVERE = 2.2;
 /** An episode with a hole longer than this can't be timed honestly. */
 export const MAX_GAP_DAYS = 3;
 
-export function recoveryProfile(days: Day[], sessions: SupportSession[]): RecoveryProfile {
+export function recoveryProfile(days: Day[], sessions: SupportSession[], tz: string = FALLBACK_TZ): RecoveryProfile {
   const series = strainSeries(days).filter((s) => s.stage !== "learning");
   const episodes: Episode[] = [];
   let cur: { start: string; peak: number } | null = null;
@@ -54,7 +55,8 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[]): Recove
 
   function finish(c: { start: string; peak: number }, end: string | null): Episode {
     const until = end ?? series.at(-1)!.date;
-    const used = sessions.filter((x) => x.ts.slice(0, 10) >= c.start && x.ts.slice(0, 10) <= until).length;
+    // Sessions are dated in the zone they happened in (local calendar date), like check-ins.
+    const used = sessions.filter((x) => { const d = localDate(x.ts, x.tz ?? tz); return d >= c.start && d <= until; }).length;
     // tags seen in the 3 days leading into the return to baseline
     const tagDays = end ? days.filter((d) => { const a = daysBetween(d.date, end); return a >= 0 && a <= 2; }) : [];
     const inside = series.filter((x) => x.date >= c.start && x.date <= until).map((x) => x.date);

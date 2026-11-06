@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import type { ThemePref } from "@/lib/types";
+import { detectedTimeZone } from "@/lib/client";
 
 export function LoginForm({ initialMode, theme }: { initialMode: "login" | "register"; theme: ThemePref }) {
   const router = useRouter();
@@ -17,13 +18,13 @@ export function LoginForm({ initialMode, theme }: { initialMode: "login" | "regi
     e.preventDefault();
     setBusy(true); setErr(null);
     try {
-      await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", "POST", { email, password });
+      await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", "POST", { email, password, timezone: detectedTimeZone() });
       router.push("/"); router.refresh();
     } catch (e) { setErr((e as Error).message); setBusy(false); }
   }
   async function demo() {
     setBusy(true); setErr(null);
-    try { await api("/api/auth/demo", "POST", {}); router.push("/"); router.refresh(); }
+    try { await api("/api/auth/demo", "POST", { timezone: detectedTimeZone() }); router.push("/"); router.refresh(); }
     catch (e) { setErr((e as Error).message); setBusy(false); }
   }
 

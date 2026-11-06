@@ -3,6 +3,7 @@ import { addCompanion, getSettings, listCheckIns, listCompanion, listMemories, l
 import { buildSummary } from "./summary";
 import { CRISIS_MESSAGE, crisisResources, detectCrisis, type Resource } from "./safety";
 import { MODES } from "./modes";
+import { resolveTimeZone } from "./time";
 
 export const COMPANION_MODEL = process.env.CALM_COMPANION_MODEL || "claude-opus-5-5";
 
@@ -55,7 +56,7 @@ export async function companionReply(uid: UserId, userText: string): Promise<Com
   // 3. Build context (only if the person allowed it in settings).
   let context = `Current mode: ${MODES[settings.mode].label}. Tone: ${MODES[settings.mode].tone}.`;
   if (settings.companionUsesContext) {
-    const s = buildSummary(listCheckIns(uid, 60), listSessions(uid, 90), listMemories(uid));
+    const s = buildSummary(listCheckIns(uid, 60), listSessions(uid, 90), listMemories(uid), new Date(), resolveTimeZone(settings.timezone));
     context += `\n\nWhat Calm currently knows about this person (from their own check-ins):\n${s.text}`;
   } else {
     context += "\n\nThe person has chosen not to share their wellbeing data with the companion. Don't refer to patterns.";

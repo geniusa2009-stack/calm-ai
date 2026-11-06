@@ -71,8 +71,8 @@ export function strainSeries(days: Day[]) {
   });
 }
 
-export function computePulse(allDays: Day[], now = new Date()): Pulse {
-  const asOf = localDate(now);
+export function computePulse(allDays: Day[], now = new Date(), tz?: string): Pulse {
+  const asOf = localDate(now, tz);
   // Ignore anything dated after "now" (clock skew, delayed or out-of-order imports).
   const days = allDays.filter((d) => d.date <= asOf);
   const baseline = computeBaseline(days, asOf);

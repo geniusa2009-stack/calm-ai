@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDay } from "@/lib/time";
 import { patternsSnapshot } from "@/lib/snapshot";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { requireUser } from "@/lib/session";
@@ -10,7 +11,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { InsightFeedback } from "./InsightFeedback";
 
 export const dynamic = "force-dynamic";
-const short = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const short = (d: string) => formatDay(d, { month: "short", day: "numeric" });
 
 export default async function PatternsPage() {
   const user = await requireUser();

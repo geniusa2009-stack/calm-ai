@@ -1,5 +1,6 @@
 import { addCheckIn, addMemory, addSession, addCircle, saveSettings, wipeUserData, type UserId } from "./db";
 import type { Mode, ToolId } from "./types";
+import { addDays, localDate, resolveTimeZone, weekdayOf, zonedTimeToUtc } from "./time";
 
 /** Small deterministic PRNG so demo data is the same every time. */
 function rng(seed: number) {
@@ -17,17 +18,22 @@ const clampInt = (x: number, lo = 1, hi = 10) => Math.max(lo, Math.min(hi, Math.
  * exercise helps, late screens cut sleep, one strain episode with a recovery,
  * and a gentle slide over the last few days for the radar to notice.
  */
-export function seedDemo(uid: UserId, mode: Mode = "work", days = 42) {
+export function seedDemo(uid: UserId, mode: Mode = "work", days = 42, timezone = "UTC") {
+  const tz = resolveTimeZone(timezone);
   wipeUserData(uid); // only ever called for a demo account (enforced by callers)
   const r = rng(7);
   const now = new Date();
+  const today = localDate(now, tz);
   let prevSleep = 7.2;
   let prevLateScreens = false;
 
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 9 + Math.floor(r() * 10), Math.floor(r() * 60));
+    // Local wall-clock time on that local day, in the account's zone.
+    const day = addDays(today, -i);
+    let date = zonedTimeToUtc(day, 9 + Math.floor(r() * 10), Math.floor(r() * 60), tz);
+    if (date > now) date = new Date(now.getTime() - 60e3); // today's entry can't be in the future
     if (i > 0 && r() < 0.08) continue; // occasional missed day
-    const dow = date.getDay();
+    const dow = weekdayOf(day);
     const tags: string[] = [];
     const episode = i <= 30 && i >= 24; // a harder stretch ~4 weeks ago
     const slide = i <= 4; // gentle recent drift
@@ -64,7 +70,7 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42) {
 
     addCheckIn(uid, {
       ts: date.toISOString(), mood: clampInt(mood), energy: clampInt(energy), stress: clampInt(stress), focus,
-      sleepHours: sleep, sleepQuality: quality, tags, mode,
+      sleepHours: sleep, sleepQuality: quality, tags, mode, tz,
       note: i === 27 ? "Three deadlines landed at once. Barely slept." : i === 22 ? "Took the afternoon off and went for a long walk. Felt human again." : null,
     }, "demo");
     prevSleep = sleep;
@@ -76,7 +82,7 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42) {
       const [tool, eff] = options[Math.floor(r() * options.length)];
       const pre = clampInt(stress + r());
       const post = clampInt(pre - eff + (r() - 0.5) * 1.5);
-      addSession(uid, { ts: new Date(date.getTime() + 3600e3).toISOString(), tool, preStress: pre, postStress: post,
+      addSession(uid, { ts: new Date(Math.min(now.getTime(), date.getTime() + 3600e3)).toISOString(), tz, tool, preStress: pre, postStress: post,
         helpful: pre - post >= 2 ? 1 : pre - post <= 0 ? -1 : 0, durationSec: 60 + Math.floor(r() * 300), note: null });
     }
   }
@@ -88,5 +94,5 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42) {
   addMemory(uid, "note", "Mondays feel heavier when I don't plan the week on Sunday.", "user", at(9));
   addCircle(uid, { name: "Sam", relation: "Close friend", contact: null, note: "Good for a walk and a vent" });
   addCircle(uid, { name: "Mum", relation: "Family", contact: null, note: null });
-  saveSettings(uid, { onboarded: true, mode, displayName: "" });
+  saveSettings(uid, { onboarded: true, mode, displayName: "", timezone: tz });
 }

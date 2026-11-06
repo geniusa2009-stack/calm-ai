@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import type { Memory, MemoryKind } from "@/lib/types";
 import { EmptyState, Notice } from "@/components/ui";
+import { formatInstant } from "@/lib/time";
 
 const KIND_LABEL: Record<MemoryKind, string> = { note: "Note", win: "Win", trigger: "Watch out for", helped: "What helped", insight: "Insight" };
 
-export function MemoryClient({ memories }: { memories: Memory[] }) {
+export function MemoryClient({ memories, tz }: { memories: Memory[]; tz: string }) {
   const router = useRouter();
   const [kind, setKind] = useState<MemoryKind>("helped");
   const [text, setText] = useState("");
@@ -50,7 +51,7 @@ export function MemoryClient({ memories }: { memories: Memory[] }) {
           {shown.map((m) => (
             <div key={m.id} className="card tight stack" style={{ gap: 6 }}>
               <div className="row between">
-                <span className="faint">{KIND_LABEL[m.kind]} · {new Date(m.ts).toLocaleDateString()}{m.source === "system" ? " · noted by Calm" : ""}{m.pinned ? " · 📌 pinned" : ""}</span>
+                <span className="faint">{KIND_LABEL[m.kind]} · {formatInstant(m.ts, tz)}{m.source === "system" ? " · noted by Calm" : ""}{m.pinned ? " · 📌 pinned" : ""}</span>
                 <div className="row" style={{ gap: 6 }}>
                   <button className="btn ghost small" onClick={() => act(() => api("/api/memories", "PATCH", { id: m.id, pinned: !m.pinned }))}>{m.pinned ? "Unpin" : "Pin"}</button>
                   <button className="btn ghost small" onClick={() => act(() => api(`/api/memories?id=${m.id}`, "DELETE"))} aria-label="Delete memory">Delete</button>

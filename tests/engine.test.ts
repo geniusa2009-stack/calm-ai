@@ -10,6 +10,7 @@ import { whatIf } from "../lib/engine/whatif";
 import { weeklyInsights } from "../lib/engine/insights";
 import { groupByDay, localDate } from "../lib/engine/days";
 import { makeDays, wobble } from "./helpers";
+import { zonedTimeToUtc } from "../lib/time";
 import type { CheckIn, SupportSession } from "../lib/types";
 
 const today = localDate(new Date());
@@ -148,12 +149,12 @@ test("insights respect 'doesn't fit' feedback", () => {
 });
 
 test("groupByDay averages multiple check-ins and unions tags", () => {
-  const base: Omit<CheckIn, "id" | "ts" | "stress" | "tags"> = { mood: 5, energy: 5, focus: null, sleepHours: 7, sleepQuality: null, note: null, mode: "everyday", source: "manual" };
-  const now = new Date();
+  const base: Omit<CheckIn, "id" | "ts" | "stress" | "tags"> = { mood: 5, energy: 5, focus: null, sleepHours: 7, sleepQuality: null, note: null, mode: "everyday", source: "manual", tz: null };
+  // Zone-explicit fixture: 09:00 and 18:00 on the same local day in Cairo.
   const days = groupByDay([
-    { ...base, id: 1, ts: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9).toISOString(), stress: 4, tags: ["a"] },
-    { ...base, id: 2, ts: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18).toISOString(), stress: 8, tags: ["b"], sleepHours: null },
-  ]);
+    { ...base, id: 1, ts: zonedTimeToUtc("2026-11-05", 9, 0, "Africa/Cairo").toISOString(), stress: 4, tags: ["a"] },
+    { ...base, id: 2, ts: zonedTimeToUtc("2026-11-05", 18, 0, "Africa/Cairo").toISOString(), stress: 8, tags: ["b"], sleepHours: null },
+  ], "Africa/Cairo");
   assert.equal(days.length, 1);
   assert.equal(days[0].stress, 6);
   assert.deepEqual(days[0].tags.sort(), ["a", "b"]);

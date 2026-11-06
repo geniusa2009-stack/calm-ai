@@ -2,7 +2,8 @@ process.env.CALM_DB_PATH = ":memory:";
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { useDatabase, exportAll, countUserRows, addCheckIn } from "../lib/db";
+import { useDatabase, exportAll, countUserRows, addCheckIn, saveSettings } from "../lib/db";
+import { zonedTimeToUtc } from "../lib/time";
 import { register, createSession, createDemoUser, SESSION_COOKIE, deleteAccount } from "../lib/auth";
 import { validateReading } from "../lib/signals/validate";
 import { ingest, listReadings } from "../lib/signals/store";
@@ -124,19 +125,21 @@ test("aggregation: device timezone decides which local day a reading belongs to"
 
 test("merge: self-reported sleep wins; wearable sleep only fills gaps; signals never create days", async () => {
   const u = await register("merge@example.com", "correct horse battery");
-  const today = localDate(new Date());
+  const TZ = "Africa/Cairo"; // zone-explicit: must not depend on the machine running the test
+  saveSettings(u.id, { timezone: TZ });
+  const today = localDate(new Date(), TZ);
   const y = addDays(today, -1);
-  addCheckIn(u.id, { ts: new Date(`${y}T12:00:00`).toISOString(), mood: 6, energy: 6, stress: 4, focus: null, sleepHours: 7.5, sleepQuality: 3, tags: [], note: null, mode: "everyday" });
-  addCheckIn(u.id, { ts: new Date(`${today}T12:00:00`).toISOString(), mood: 6, energy: 6, stress: 4, focus: null, sleepHours: null, sleepQuality: null, tags: [], note: null, mode: "everyday" });
+  addCheckIn(u.id, { tz: TZ, ts: zonedTimeToUtc(y, 12, 0, TZ).toISOString(), mood: 6, energy: 6, stress: 4, focus: null, sleepHours: 7.5, sleepQuality: 3, tags: [], note: null, mode: "everyday" });
+  addCheckIn(u.id, { tz: TZ, ts: new Date(Math.min(Date.now(), zonedTimeToUtc(today, 12, 0, TZ).getTime())).toISOString(), mood: 6, energy: 6, stress: 4, focus: null, sleepHours: null, sleepQuality: null, tags: [], note: null, mode: "everyday" });
   const mk = (day: string, hours: number) => {
-    const end = new Date(`${day}T07:00:00`); const start = new Date(end.getTime() - hours * 3600e3);
+    const end = zonedTimeToUtc(day, 7, 0, TZ); const start = new Date(end.getTime() - hours * 3600e3);
     return { id: `w-${day}`, kind: "sleep", value: hours * 60, unit: "min", start: start.toISOString(), end: end.toISOString() };
   };
-  ingest(u.id, "file-import", [mk(y, 5), mk(today, 6), mk(addDays(today, -5), 8)]);
+  ingest(u.id, "file-import", [mk(y, 5), ...(zonedTimeToUtc(today, 7, 0, TZ).getTime() < Date.now() ? [mk(today, 6)] : []), mk(addDays(today, -5), 8)]);
   const s = snapshot(u.id);
   const byDate = new Map(s.days.map((d) => [d.date, d]));
   assert.equal(byDate.get(y)!.sleepHours, 7.5, "self-report kept");
-  assert.equal(byDate.get(today)!.sleepHours, 6, "gap filled from wearable");
+  if (zonedTimeToUtc(today, 7, 0, TZ).getTime() < Date.now()) assert.equal(byDate.get(today)!.sleepHours, 6, "gap filled from wearable");
   assert.equal(s.days.length, 2, "wearable-only day not created");
   assert.equal(mergeSignals(groupByDay([]), new Map()).length, 0);
 });

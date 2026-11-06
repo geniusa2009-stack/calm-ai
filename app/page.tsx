@@ -7,11 +7,12 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { SetupInvite } from "@/components/SetupInvite";
 import { EmptyState } from "@/components/ui";
 import { daysBetween, localDate } from "@/lib/engine/days";
+import { formatDay, localParts } from "@/lib/time";
+import { TimezoneSync } from "@/components/TimezoneSync";
 
 export const dynamic = "force-dynamic";
 
-function greeting(name: string) {
-  const h = new Date().getHours();
+function greeting(name: string, h: number) {
   const part = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   return name ? `${part}, ${name}` : part;
 }
@@ -24,7 +25,9 @@ export default async function Today() {
   if (!s.settings.onboarded) return <Welcome />;
   const { pulse, radar, recommendations, nudges, mode } = s;
   const top = recommendations[0];
-  const today = localDate(new Date());
+  const now = new Date();
+  const today = localDate(now, s.tz);
+  const hour = localParts(now, s.tz).hour; // the person's local hour, not the server's
   const week = s.days.filter((d) => daysBetween(d.date, today) < 14);
   const b = pulse.baseline;
   const showInvite = s.days.length > 0 && (s.settings.deviceSetup === "pending" || s.settings.deviceSetup === "in-progress");
@@ -33,10 +36,11 @@ export default async function Today() {
   return (
     <div className="stack lg">
       {user.isDemo && <DemoBanner />}
+      <TimezoneSync saved={s.settings.timezone} />
       <header className="page-head">
         <div>
-          <span className="eyebrow">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>
-          <h1>{greeting(s.settings.displayName)}</h1>
+          <span className="eyebrow">{formatDay(today, { weekday: "long", month: "long", day: "numeric" })}</span>
+          <h1>{greeting(s.settings.displayName, hour)}</h1>
           <p className="lead"><Link href="/settings#mode">{mode.label} mode</Link>{s.checkedInToday ? " · You've checked in today" : ""}</p>
         </div>
         {!s.checkedInToday && <Link href="/check-in" className="btn big">Check in</Link>}
@@ -123,7 +127,7 @@ export default async function Today() {
               <LineChart
                 ariaLabel="Stress, mood and energy over the last two weeks"
                 width={520}
-                labels={week.map((d) => new Date(d.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" }))}
+                labels={week.map((d) => formatDay(d.date, { weekday: "short" }))}
                 band={{ lo: b.stress.center - b.stress.spread, hi: b.stress.center + b.stress.spread, color: "var(--care-soft)" }}
                 series={[
                   { label: "Stress", color: "var(--strain)", values: week.map((d) => d.stress) },

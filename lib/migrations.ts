@@ -173,6 +173,15 @@ export const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 4,
+    name: "timezones: record the IANA zone of each check-in and support session",
+    // Additive and nullable: existing rows keep NULL and are dated in the user's current zone.
+    up: (db) => {
+      db.exec("ALTER TABLE checkins ADD COLUMN tz TEXT;");
+      db.exec("ALTER TABLE support_sessions ADD COLUMN tz TEXT;");
+    },
+  },
 ];
 
 export function migrate(db: Database.Database) {

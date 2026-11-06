@@ -1,5 +1,6 @@
 import type { Day } from "./days";
-import { daysBetween, localDate } from "./days";
+import { addDays, daysBetween, localDate, weekdayOf } from "./days";
+import { formatDay } from "../time";
 import type { SupportSession } from "../types";
 import { computeBaseline } from "./baseline";
 import { tagEffects, sleepLinks, weekdayPatterns, prettyTag, confidenceFromQ } from "./context";
@@ -16,17 +17,16 @@ export interface Insight {
 }
 
 /** ISO-ish week id (YYYY-Www) so 'hide' on the weekly summary only lasts that week. */
-function weekKey(d: Date) {
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = t.getUTCDay() || 7;
-  t.setUTCDate(t.getUTCDate() + 4 - day);
-  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-  return `${t.getUTCFullYear()}-W${String(Math.ceil(((t.getTime() - y0.getTime()) / 864e5 + 1) / 7)).padStart(2, "0")}`;
+export function weekKey(date: string) {
+  // ISO week of a local calendar date (Thursday rule), computed on the date alone.
+  const thursday = addDays(date, 3 - ((weekdayOf(date) + 6) % 7));
+  const jan1 = thursday.slice(0, 4) + "-01-01";
+  return `${thursday.slice(0, 4)}-W${String(Math.floor(daysBetween(jan1, thursday) / 7) + 1).padStart(2, "0")}`;
 }
 
 /** Weekly insights. User feedback (+1 fits / -1 doesn't fit) re-ranks or hides cards. */
-export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback: Record<string, number>, now = new Date()): Insight[] {
-  const asOf = localDate(now);
+export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback: Record<string, number>, now = new Date(), tz?: string): Insight[] {
+  const asOf = localDate(now, tz);
   const out: Insight[] = [];
   const thisWeek = days.filter((d) => { const a = daysBetween(d.date, asOf); return a >= 0 && a < 7; });
   const lastWeek = days.filter((d) => { const a = daysBetween(d.date, asOf); return a >= 7 && a < 14; });
@@ -39,9 +39,9 @@ export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback
     const vs = lastWeek.length >= 3 ? mean(lastWeek.map((d) => d.stress)) : null;
     const delta = vs != null ? s - vs : s - b.stress.center;
     const comp = vs != null ? "last week" : "your usual";
-    const dayName = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+    const dayName = (d: string) => formatDay(d, { weekday: "long" });
     out.push({
-      key: `week:${weekKey(now)}`, kind: "week", confidence: thisWeek.length >= 5 ? "high" : "medium",
+      key: `week:${weekKey(asOf)}`, kind: "week", confidence: thisWeek.length >= 5 ? "high" : "medium",
       title: Math.abs(delta) < 0.5 ? "A fairly typical week" : delta > 0 ? "A heavier week than " + comp : "A lighter week than " + comp,
       body: `Stress averaged ${round(s)} (${delta >= 0 ? "+" : ""}${round(delta)} vs ${comp}), mood ${round(m)}. ` +
         (best.date !== hard.date ? `${dayName(best.date)} was your best day; ${dayName(hard.date)} the hardest.` : ""),
@@ -59,7 +59,7 @@ export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback
   const wk = weekdayPatterns(days)[0];
   if (wk) out.push({ key: `rhythm:${wk.weekday}`, kind: "rhythm", confidence: confidenceFromQ(wk.q, wk.n) ?? "low", title: `Your ${wk.weekday}s`, body: wk.text });
 
-  const rec = recoveryProfile(days, sessions);
+  const rec = recoveryProfile(days, sessions, tz);
   const reliable = rec.episodes.filter((e) => e.end && !e.uncertain).length;
   if (rec.episodes.length) out.push({ key: "recovery:profile", kind: "recovery", confidence: reliable >= 3 ? "medium" : "low", title: "How you recover", body: rec.text });
 

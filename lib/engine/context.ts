@@ -1,5 +1,5 @@
 import type { Day } from "./days";
-import { addDays } from "./days";
+import { addDays, weekdayOf } from "./days";
 import { bhAdjust, linreg, mean, pearson, pearsonP, round, sd, welch } from "./stats";
 
 /**
@@ -136,7 +136,7 @@ export function sleepLinks(days: Day[]): SleepLink[] {
 
 export function weekdayPatterns(days: Day[]): WeekdayPattern[] {
   if (days.length < 21) return [];
-  const dow = (d: Day) => new Date(d.date + "T12:00:00").getDay();
+  const dow = (d: Day) => weekdayOf(d.date);
   const cands: { w: number; diff: number; n: number; p: number }[] = [];
   for (let w = 0; w < 7; w++) {
     const xs = days.filter((d) => dow(d) === w).map((d) => d.stress);

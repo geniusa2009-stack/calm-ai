@@ -15,32 +15,24 @@ export interface Day {
   count: number;
 }
 
-export function localDate(d: Date | string) {
-  const x = typeof d === "string" ? new Date(d) : d;
-  const y = x.getFullYear(), m = String(x.getMonth() + 1).padStart(2, "0"), day = String(x.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-export function addDays(date: string, n: number) {
-  const [y, m, d] = date.split("-").map(Number);
-  return localDate(new Date(y, m - 1, d + n));
-}
-
-export function daysBetween(a: string, b: string) {
-  const [y1, m1, d1] = a.split("-").map(Number);
-  const [y2, m2, d2] = b.split("-").map(Number);
-  return Math.round((new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime()) / 864e5);
-}
+// Calendar helpers live in lib/time.ts (zone-explicit, DST-safe). Re-exported for existing callers.
+export { localDate, addDays, daysBetween, weekdayOf } from "../time";
+import { localDate, FALLBACK_TZ } from "../time";
 
 const avgOrNull = (xs: (number | null)[]) => {
   const v = xs.filter((x): x is number => x != null);
   return v.length ? mean(v) : null;
 };
 
-export function groupByDay(checkins: CheckIn[]): Day[] {
+/**
+ * Group check-ins into local calendar days. Each check-in is dated in the zone it was
+ * RECORDED in (`c.tz`), so travelling never moves past entries to a different day.
+ * Legacy rows without a zone use `fallbackTz` (the user's current zone).
+ */
+export function groupByDay(checkins: CheckIn[], fallbackTz: string = FALLBACK_TZ): Day[] {
   const by = new Map<string, CheckIn[]>();
   for (const c of checkins) {
-    const k = localDate(c.ts);
+    const k = localDate(c.ts, c.tz ?? fallbackTz);
     (by.get(k) ?? by.set(k, []).get(k)!).push(c);
   }
   return [...by.entries()]

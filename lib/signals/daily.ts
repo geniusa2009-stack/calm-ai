@@ -1,5 +1,6 @@
 import type { Day } from "../engine/days";
 import { localDate } from "../engine/days";
+import { FALLBACK_TZ } from "../time";
 import { median } from "../engine/stats";
 import type { Reading, SignalKind } from "./types";
 
@@ -12,9 +13,13 @@ export interface DailySignals {
   sources: Partial<Record<SignalKind, string>>; // which provider each value came from
 }
 
-/** The person's local calendar day for an instant: device offset if known, else server local. */
-export function attributionDate(iso: string, tzOffsetMinutes: number | null) {
-  if (tzOffsetMinutes == null) return localDate(iso);
+/**
+ * The person's local calendar day for an instant: the device's own offset at the time of the
+ * reading if the source provided one (or an IANA zone, converted at ingest), otherwise the
+ * user's current zone. Never the server's zone.
+ */
+export function attributionDate(iso: string, tzOffsetMinutes: number | null, userTz: string = FALLBACK_TZ) {
+  if (tzOffsetMinutes == null) return localDate(iso, userTz);
   return new Date(Date.parse(iso) + tzOffsetMinutes * 60e3).toISOString().slice(0, 10);
 }
 
@@ -41,10 +46,10 @@ export function unionLength(intervals: [number, number][]) {
  *  - several providers for the same kind/day: the one with the most coverage wins,
  *    ties broken by provider id — providers are never summed together
  */
-export function dailySignals(readings: Reading[]): Map<string, DailySignals> {
+export function dailySignals(readings: Reading[], userTz: string = FALLBACK_TZ): Map<string, DailySignals> {
   const groups = new Map<string, Map<SignalKind, Map<string, Reading[]>>>();
   for (const r of readings) {
-    const date = attributionDate(r.end, r.tzOffsetMinutes);
+    const date = attributionDate(r.end, r.tzOffsetMinutes, userTz);
     const byKind = groups.get(date) ?? groups.set(date, new Map()).get(date)!;
     const byProv = byKind.get(r.kind) ?? byKind.set(r.kind, new Map()).get(r.kind)!;
     (byProv.get(r.provider) ?? byProv.set(r.provider, []).get(r.provider)!).push(r);

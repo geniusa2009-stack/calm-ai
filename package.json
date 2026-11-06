@@ -11,7 +11,8 @@
     "test": "tsx --test tests/*.test.ts",
     "seed": "tsx scripts/seed.ts",
     "claim-legacy": "tsx scripts/claim-legacy.ts",
-    "e2e": "node e2e/ui.e2e.cjs"
+    "e2e": "node e2e/ui.e2e.cjs",
+    "test:tz": "for z in UTC Africa/Cairo America/Los_Angeles Pacific/Kiritimati; do echo \"== TZ=$z\"; TZ=$z npm test --silent >/dev/null 2>&1 && echo pass || { echo FAIL; exit 1; }; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

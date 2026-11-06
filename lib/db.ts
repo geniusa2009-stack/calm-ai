@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS: Settings = {
   deviceSetup: "pending",
   deviceStep: 0,
   theme: "system",
+  timezone: "",
 };
 
 let _db: Database.Database | null = null;
@@ -62,13 +63,13 @@ export function useDatabase(file = ":memory:") {
 type CheckInRow = {
   id: number; ts: string; mood: number; energy: number; stress: number; focus: number | null;
   sleep_hours: number | null; sleep_quality: number | null; tags: string; note: string | null;
-  mode: string; source: string;
+  mode: string; source: string; tz: string | null;
 };
 
 const toCheckIn = (r: CheckInRow): CheckIn => ({
   id: r.id, ts: r.ts, mood: r.mood, energy: r.energy, stress: r.stress, focus: r.focus,
   sleepHours: r.sleep_hours, sleepQuality: r.sleep_quality, tags: JSON.parse(r.tags),
-  note: r.note, mode: r.mode as CheckIn["mode"], source: r.source as CheckIn["source"],
+  note: r.note, mode: r.mode as CheckIn["mode"], source: r.source as CheckIn["source"], tz: r.tz ?? null,
 });
 
 export function listCheckIns(uid: UserId, sinceDays = 120): CheckIn[] {
@@ -80,9 +81,9 @@ export function addCheckIn(uid: UserId, c: NewCheckIn, source: CheckIn["source"]
   const ts = c.ts ?? new Date().toISOString();
   const tags = Array.from(new Set(c.tags.map(normalizeTag).filter(Boolean)));
   const info = db().prepare(
-    `INSERT INTO checkins (user_id, ts, mood, energy, stress, focus, sleep_hours, sleep_quality, tags, note, mode, source)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-  ).run(uid, ts, c.mood, c.energy, c.stress, c.focus, c.sleepHours, c.sleepQuality, JSON.stringify(tags), c.note, c.mode, source);
+    `INSERT INTO checkins (user_id, ts, mood, energy, stress, focus, sleep_hours, sleep_quality, tags, note, mode, source, tz)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).run(uid, ts, c.mood, c.energy, c.stress, c.focus, c.sleepHours, c.sleepQuality, JSON.stringify(tags), c.note, c.mode, source, c.tz ?? null);
   return toCheckIn(db().prepare("SELECT * FROM checkins WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as CheckInRow);
 }
 
@@ -98,11 +99,11 @@ export function normalizeTag(t: string) {
 // ---------- support sessions ----------
 type SessionRow = {
   id: number; ts: string; tool: string; pre_stress: number; post_stress: number | null;
-  helpful: number | null; duration_sec: number; note: string | null;
+  helpful: number | null; duration_sec: number; note: string | null; tz: string | null;
 };
 const toSession = (r: SessionRow): SupportSession => ({
   id: r.id, ts: r.ts, tool: r.tool as ToolId, preStress: r.pre_stress, postStress: r.post_stress,
-  helpful: r.helpful as SupportSession["helpful"], durationSec: r.duration_sec, note: r.note,
+  helpful: r.helpful as SupportSession["helpful"], durationSec: r.duration_sec, note: r.note, tz: r.tz ?? null,
 });
 
 export function listSessions(uid: UserId, sinceDays = 180): SupportSession[] {
@@ -112,8 +113,8 @@ export function listSessions(uid: UserId, sinceDays = 180): SupportSession[] {
 
 export function addSession(uid: UserId, s: Omit<SupportSession, "id" | "ts"> & { ts?: string }): SupportSession {
   const info = db().prepare(
-    `INSERT INTO support_sessions (user_id, ts, tool, pre_stress, post_stress, helpful, duration_sec, note) VALUES (?,?,?,?,?,?,?,?)`,
-  ).run(uid, s.ts ?? new Date().toISOString(), s.tool, s.preStress, s.postStress, s.helpful, s.durationSec, s.note);
+    `INSERT INTO support_sessions (user_id, ts, tool, pre_stress, post_stress, helpful, duration_sec, note, tz) VALUES (?,?,?,?,?,?,?,?,?)`,
+  ).run(uid, s.ts ?? new Date().toISOString(), s.tool, s.preStress, s.postStress, s.helpful, s.durationSec, s.note, s.tz ?? null);
   return toSession(db().prepare("SELECT * FROM support_sessions WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as SessionRow);
 }
 

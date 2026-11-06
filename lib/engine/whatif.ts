@@ -26,11 +26,11 @@ export interface WhatIfResult { ready: boolean; projections: Projection[]; basis
  * Exploratory only. Combines the person's own learned associations additively
  * and shrinks them, so the output is a rough direction — not a forecast.
  */
-export function whatIf(days: Day[], sessions: SupportSession[], s: Scenario, now = new Date()): WhatIfResult {
+export function whatIf(days: Day[], sessions: SupportSession[], s: Scenario, now = new Date(), tz?: string): WhatIfResult {
   const caveat = "These are rough, exploratory estimates built from patterns in your own data. Associations aren't guaranteed causes, and real life is noisier.";
   if (days.length < 14) return { ready: false, projections: [], basis: [], caveat: `The lab needs about two weeks of check-ins to learn your patterns (${days.length} days so far).` };
 
-  const asOf = localDate(now);
+  const asOf = localDate(now, tz);
   const recent = days.filter((d) => daysBetween(d.date, asOf) < 14);
   const effects = tagEffects(days);
   const sleep = sleepLinks(days);

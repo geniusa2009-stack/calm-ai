@@ -13,9 +13,11 @@ export interface CheckIn {
   note: string | null;
   mode: Mode;
   source: "manual" | "demo";
+  /** IANA zone the person was in when they checked in (null for entries made before v4). */
+  tz: string | null;
 }
 
-export type NewCheckIn = Omit<CheckIn, "id" | "source" | "ts"> & { ts?: string };
+export type NewCheckIn = Omit<CheckIn, "id" | "source" | "ts" | "tz"> & { ts?: string; tz?: string | null };
 
 export type ToolId =
   | "breath-box"
@@ -36,6 +38,7 @@ export interface SupportSession {
   helpful: -1 | 0 | 1 | null;
   durationSec: number;
   note: string | null;
+  tz?: string | null;
 }
 
 export type MemoryKind = "note" | "win" | "trigger" | "helped" | "insight";
@@ -82,6 +85,8 @@ export interface Settings {
   deviceSetup: DeviceSetup;
   deviceStep: number;
   theme: ThemePref;
+  /** IANA zone, e.g. "Africa/Cairo". "" = not set yet (UTC is used until it is). */
+  timezone: string;
 }
 
 export type ThemePref = "system" | "light" | "dark";

@@ -44,6 +44,8 @@ export interface RawReading {
   end: string;
   /** Device's UTC offset in minutes, so a reading is attributed to the person's local day. */
   tzOffsetMinutes?: number;
+  /** Or the device's IANA zone (preferred). Converted to the offset in force at `end` on ingest. */
+  timeZone?: string;
 }
 
 /** A validated reading in canonical units. */

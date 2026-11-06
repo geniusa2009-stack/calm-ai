@@ -1,15 +1,15 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/client";
+import { api, detectedTimeZone } from "@/lib/client";
 import { MODES } from "@/lib/modes";
 import { REGIONS } from "@/lib/safety";
 import { Dialog } from "@/components/ui/Dialog";
 import { Notice } from "@/components/ui";
 import type { Settings } from "@/lib/types";
 
-export function SettingsClient({ settings, configured, isDemo, email, deviceSlot, signalsSlot }: {
-  settings: Settings; configured: boolean; isDemo: boolean; email: string | null; deviceSlot?: ReactNode; signalsSlot?: ReactNode;
+export function SettingsClient({ settings, configured, isDemo, email, deviceSlot, signalsSlot, zones = [] }: {
+  settings: Settings; configured: boolean; isDemo: boolean; email: string | null; deviceSlot?: ReactNode; signalsSlot?: ReactNode; zones?: string[];
 }) {
   const router = useRouter();
   const [s, setS] = useState(settings);
@@ -52,6 +52,13 @@ export function SettingsClient({ settings, configured, isDemo, email, deviceSlot
         <label className="field">Region <span className="faint">Used only to show the right crisis lines</span>
           <select value={s.region} onChange={(e) => update({ region: e.target.value })}>{REGIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         </label>
+        <label className="field">Time zone <span className="faint">Decides which day each check-in counts towards, and when reminders and quiet hours apply. Past check-ins keep the zone they were made in.</span>
+          <select value={s.timezone || "UTC"} onChange={(e) => update({ timezone: e.target.value })}>
+            {!s.timezone && <option value="UTC">Not set yet — using UTC</option>}
+            {zones.map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}
+          </select>
+        </label>
+        <div><button type="button" className="btn ghost small" onClick={() => { const d = detectedTimeZone(); if (d) update({ timezone: d }); }}>Use this device&apos;s time zone</button></div>
       </section>
 
       <section className="card stack" id="nudges" aria-labelledby="nudges-h">

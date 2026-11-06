@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { ACCEPTED_UNITS, PLAUSIBLE, type RawReading, type Reading, type SignalKind } from "./types";
+import { canonicalTimeZone, tzOffsetMinutes } from "../time";
 
 const KINDS = Object.keys(ACCEPTED_UNITS) as SignalKind[];
 export const MAX_FUTURE_MS = 15 * 60e3; // tolerate small clock skew only
@@ -38,7 +39,12 @@ export function validateReading(raw: unknown, provider: string, now = Date.now()
   if (end < now - MAX_AGE_DAYS * 864e5) return { ok: false, reason: "reading is too old" };
 
   let tz: number | null = null;
-  if (r.tzOffsetMinutes !== undefined) {
+  if (r.timeZone !== undefined) {
+    const zone = canonicalTimeZone(r.timeZone);
+    if (!zone) return { ok: false, reason: "timeZone must be an IANA zone such as Africa/Cairo" };
+    tz = tzOffsetMinutes(end, zone); // exact offset at that moment, DST included
+    if (r.tzOffsetMinutes !== undefined && r.tzOffsetMinutes !== tz) return { ok: false, reason: "timeZone and tzOffsetMinutes disagree" };
+  } else if (r.tzOffsetMinutes !== undefined) {
     if (typeof r.tzOffsetMinutes !== "number" || !Number.isInteger(r.tzOffsetMinutes) || Math.abs(r.tzOffsetMinutes) > 14 * 60) {
       return { ok: false, reason: "tzOffsetMinutes must be an integer within ±840" };
     }

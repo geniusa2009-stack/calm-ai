@@ -21,8 +21,8 @@ export interface Signal {
  * person's own baseline — the kind that are easy to miss day-to-day.
  * Deliberately conservative: it needs agreement across several days.
  */
-export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1): { signals: Signal[]; ready: boolean; note?: string } {
-  const asOf = localDate(now);
+export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?: string): { signals: Signal[]; ready: boolean; note?: string } {
+  const asOf = localDate(now, tz);
   const days = allDays.filter((d) => d.date <= asOf); // ignore future-dated / out-of-order data
   const b = computeBaseline(days, asOf);
   if (b.days < 7) return { signals: [], ready: false, note: `Radar starts watching after 7 days of check-ins (${b.days} so far).` };

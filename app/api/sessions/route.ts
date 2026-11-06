@@ -1,4 +1,5 @@
-import { addMemory, addSession } from "@/lib/db";
+import { addMemory, addSession, getSettings } from "@/lib/db";
+import { resolveTimeZone } from "@/lib/time";
 import { toolById, TOOLS } from "@/lib/engine/support";
 import { route } from "@/lib/http";
 import { int, oneOf, str } from "@/lib/validate";
@@ -11,6 +12,7 @@ export const POST = route(async (req, { user }) => {
   const s = addSession(user.id, {
     tool, preStress: int(b.preStress, "preStress", 1, 10)!, postStress: int(b.postStress, "postStress", 1, 10, true),
     helpful, durationSec: int(b.durationSec ?? 0, "durationSec", 0, 7200)!, note: str(b.note, "note", 1000, true),
+    tz: resolveTimeZone(getSettings(user.id).timezone),
   });
   // Remember clear wins automatically, so Personal Memory reflects what actually helps.
   if (s.postStress != null && s.preStress - s.postStress >= 3 && helpful === 1) {

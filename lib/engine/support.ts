@@ -2,6 +2,7 @@ import type { Mode, SupportSession, ToolId } from "../types";
 import { MODES } from "../modes";
 import type { PulseState } from "./pulse";
 import { round } from "./stats";
+import { FALLBACK_TZ, localParts } from "../time";
 
 export interface Tool {
   id: ToolId;
@@ -65,9 +66,9 @@ export function toolEfficacy(sessions: SupportSession[]): Record<string, Efficac
 
 export interface Recommendation { tool: Tool; score: number; reason: string; personal: Efficacy }
 
-export function recommend(state: PulseState, sessions: SupportSession[], mode: Mode, now = new Date()): Recommendation[] {
+export function recommend(state: PulseState, sessions: SupportSession[], mode: Mode, now = new Date(), tz: string = FALLBACK_TZ): Recommendation[] {
   const eff = toolEfficacy(sessions);
-  const hour = now.getHours();
+  const hour = localParts(now, tz).hour; // the person's local hour, not the server's
   const evening = hour >= 20 || hour < 4;
   const preferred = MODES[mode].preferredTools;
   const key: PulseState = state === "learning" || state === "no-recent" ? "steady" : state;

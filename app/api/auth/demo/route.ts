@@ -4,6 +4,7 @@ import { syncProvider } from "@/lib/signals/sync";
 import { json, readCookie, route, sessionCookie } from "@/lib/http";
 import { saveSettings } from "@/lib/db";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
+import { canonicalTimeZone } from "@/lib/time";
 import { oneOf } from "@/lib/validate";
 import type { Mode } from "@/lib/types";
 
@@ -13,7 +14,7 @@ export const POST = route({ public: true }, async (req, { token }) => {
   const mode = b.mode ? oneOf(b.mode, "mode", ["everyday", "study", "work", "activity", "recovery"] as Mode[]) : "work";
   destroySession(token);
   const user = createDemoUser();
-  seedDemo(user.id, mode);
+  seedDemo(user.id, mode, 42, canonicalTimeZone(b.timezone) ?? "UTC");
   await syncProvider(user, "demo"); // synthetic wearable data, demo accounts only
   const theme = parseTheme(readCookie(req, THEME_COOKIE));
   if (theme !== "system") saveSettings(user.id, { theme });
