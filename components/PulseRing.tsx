@@ -37,7 +37,7 @@ export function PulseRing({ score, state, size = 200, label }: { score: number; 
         style={{ strokeDasharray: `${target} 100`, transition: "stroke-dasharray var(--dur-pulse) var(--ease), stroke var(--dur-slow) var(--ease)", opacity: quiet ? 0 : 1 }} />
       <line x1={ux1} y1={uy1} x2={ux2} y2={uy2} stroke="var(--ink-3)" strokeWidth={2} strokeLinecap="round" />
       <text x={c} y={c + 6} textAnchor="middle" fontSize={size * 0.24} fontWeight={700} fill="var(--ink)" style={{ fontVariantNumeric: "tabular-nums" }}>{quiet ? "·" : shown}</text>
-      <text x={c} y={c + size * 0.18} textAnchor="middle" fontSize={11} fill="var(--ink-3)">{state === "learning" ? "learning" : state === "no-recent" ? "no recent data" : "tick = your usual"}</text>
+      <text x={c} y={c + size * 0.18} textAnchor="middle" fontSize={11} fill="var(--text-faint)">{state === "learning" ? "learning" : state === "no-recent" ? "no recent data" : "tick = your usual"}</text>
     </svg>
   );
 }

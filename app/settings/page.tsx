@@ -5,6 +5,7 @@ import { SettingsClient } from "./SettingsClient";
 import { SignalsClient } from "./SignalsClient";
 import { DevicePermissions } from "./DevicePermissions";
 import { PageHeader } from "@/components/ui";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { PROVIDERS } from "@/lib/signals/providers";
 import { connections } from "@/lib/signals/store";
 
@@ -17,10 +18,15 @@ export default async function SettingsPage() {
     <div className="stack lg" style={{ maxWidth: 760 }}>
       <PageHeader eyebrow="Settings" title="Your preferences" lead="How Calm works for you, what it can use on this device, and what happens to your data." />
       <nav aria-label="Settings sections" className="row settings-toc">
-        {[["mode", "Mode"], ["nudges", "Nudges"], ["device", "Device & permissions"], ["companion", "Companion"], ["signals", "Connected data"], ["data", "Your data"], ["account", "Account"]].map(([id, l]) => (
+        {[["appearance", "Appearance"], ["mode", "Mode"], ["nudges", "Nudges"], ["device", "Device & permissions"], ["companion", "Companion"], ["signals", "Connected data"], ["data", "Your data"], ["account", "Account"]].map(([id, l]) => (
           <a key={id} href={`#${id}`} className="chip">{l}</a>
         ))}
       </nav>
+      <section className="card stack" id="appearance" aria-labelledby="appearance-h">
+        <h2 id="appearance-h">Appearance</h2>
+        <ThemeSwitcher initial={settings.theme} />
+        <span className="faint">Saved to your account, so it follows you when you sign in on another device.</span>
+      </section>
       <SettingsClient
         settings={settings} configured={companionConfigured()} isDemo={user.isDemo} email={user.email}
         deviceSlot={<DevicePermissions prefs={{ notifyEnabled: settings.notifyEnabled, wakeLockEnabled: settings.wakeLockEnabled, hapticsEnabled: settings.hapticsEnabled, deviceSetup: settings.deviceSetup }} />}

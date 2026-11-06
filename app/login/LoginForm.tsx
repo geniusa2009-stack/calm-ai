@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import type { ThemePref } from "@/lib/types";
 
-export function LoginForm({ initialMode }: { initialMode: "login" | "register" }) {
+export function LoginForm({ initialMode, theme }: { initialMode: "login" | "register"; theme: ThemePref }) {
   const router = useRouter();
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
@@ -48,6 +50,10 @@ export function LoginForm({ initialMode }: { initialMode: "login" | "register" }
         <span className="muted">Explore a temporary demo account with six weeks of made-up data. It&apos;s kept separate from any real account and deleted automatically.</span>
         <div><button className="btn ghost" onClick={demo} disabled={busy}>Try the demo</button></div>
       </div>
+      <details className="card tight">
+        <summary>Appearance</summary>
+        <div style={{ marginTop: 12 }}><ThemeSwitcher initial={theme} signedIn={false} /></div>
+      </details>
     </div>
   );
 }

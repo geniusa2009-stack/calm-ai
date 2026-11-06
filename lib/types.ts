@@ -81,7 +81,11 @@ export interface Settings {
   hapticsEnabled: boolean;
   deviceSetup: DeviceSetup;
   deviceStep: number;
+  theme: ThemePref;
 }
+
+export type ThemePref = "system" | "light" | "dark";
+export const THEMES: ThemePref[] = ["system", "light", "dark"];
 
 export type DeviceSetup = "pending" | "in-progress" | "done" | "skipped";
 

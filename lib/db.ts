@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS: Settings = {
   hapticsEnabled: false,
   deviceSetup: "pending",
   deviceStep: 0,
+  theme: "system",
 };
 
 let _db: Database.Database | null = null;

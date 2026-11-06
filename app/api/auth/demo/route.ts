@@ -1,7 +1,9 @@
 import { createDemoUser, createSession, destroySession } from "@/lib/auth";
 import { seedDemo } from "@/lib/seed";
 import { syncProvider } from "@/lib/signals/sync";
-import { json, route, sessionCookie } from "@/lib/http";
+import { json, readCookie, route, sessionCookie } from "@/lib/http";
+import { saveSettings } from "@/lib/db";
+import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 import { oneOf } from "@/lib/validate";
 import type { Mode } from "@/lib/types";
 
@@ -13,6 +15,8 @@ export const POST = route({ public: true }, async (req, { token }) => {
   const user = createDemoUser();
   seedDemo(user.id, mode);
   await syncProvider(user, "demo"); // synthetic wearable data, demo accounts only
+  const theme = parseTheme(readCookie(req, THEME_COOKIE));
+  if (theme !== "system") saveSettings(user.id, { theme });
   const s = createSession(user.id, true);
   return json({ ok: true }, { headers: { "set-cookie": sessionCookie(s.token, s.expires) } });
 });

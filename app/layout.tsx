@@ -4,6 +4,8 @@ import { SideNav, BottomNav } from "@/components/Nav";
 import { NotificationBridge } from "@/components/NotificationBridge";
 import { currentUser } from "@/lib/session";
 import { getSettings } from "@/lib/db";
+import { cookies } from "next/headers";
+import { THEME_COOKIE, parseTheme, themeAttr } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Calm",
@@ -17,9 +19,13 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Chrome only; every page still enforces auth itself via requireUser().
   const user = await currentUser();
-  const notify = user ? getSettings(user.id).notifyEnabled : false;
+  const settings = user ? getSettings(user.id) : null;
+  const notify = settings?.notifyEnabled ?? false;
+  // Theme is rendered on the server, so the first paint is already correct (no flash):
+  // the account's choice when signed in, otherwise this device's last choice.
+  const theme = settings ? settings.theme : parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang="en">
+    <html lang="en" data-theme={themeAttr(theme)} suppressHydrationWarning>
       <body>
         <a href="#main" className="skip-link">Skip to content</a>
         {user ? (

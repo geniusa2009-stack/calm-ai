@@ -19,6 +19,21 @@ Reusable pieces:
 - `components/PulseRing.tsx`: animated gauge with a text alternative.
 - Route-level files: `app/template.tsx` (page entrance), `app/loading.tsx` (skeleton), `app/error.tsx`, `app/not-found.tsx`.
 
+## Themes: Light, Dark, System
+
+- **Light** uses the **original Calm palette from commit `0b75295`, value for value** (`tests/theme.test.ts` checks this).
+  - Tokens added later (`--surface-3`, `--line-strong`, `--accent-hover`, `--accent-softer`, `--warn-soft`, …) are **derived** from those originals with `color-mix()`; no new hues.
+  - Where an original colour is used as small *text*, a derived text token keeps WCAG AA: `--text-faint`, `--link`, `--stretch-text`, `--strain-text` and `--danger-bg`. Each mixes the original colour toward the original ink. Fills, lines, tints and chart strokes keep the exact originals.
+- **Dark** uses one token set, applied by `:root[data-theme="dark"]` (an explicit choice) or by `prefers-color-scheme: dark` when nothing is chosen (System). The two copies must stay identical; the test checks this.
+- **System** is the default: there's no `data-theme` attribute, so the theme follows the device, including live changes.
+- **No hardcoded colours** appear outside the token blocks, in CSS or TSX. A test enforces this, apart from the browser-chrome `theme-color` meta tag.
+- **Persistence:**
+  - The choice is saved to the account (`settings.theme`) and mirrored to a `calm_theme` cookie.
+  - The server renders `<html data-theme>`, so the first paint is correct with no flash: the account's choice when signed in, otherwise the device cookie.
+  - New and demo accounts adopt the device's current choice.
+- **Switching** happens in place, with no reload: a ~400ms colour cross-fade, or instant under reduced motion. You can switch from Settings → Appearance, or from Appearance on the sign-in page.
+- **Verification:** `e2e/theme.e2e.cjs` checks the exact colours, System following the device, switching without a reload, server rendering after a refresh, sign-out and sign-in on a fresh device, reduced motion, and every page plus a dialog in both themes at phone and desktop sizes.
+
 ## Motion
 
 - **Animation technique:** only `transform` and `opacity` are animated. The one exception is the Pulse arc's `stroke-dasharray`, which is a cheap SVG paint.
