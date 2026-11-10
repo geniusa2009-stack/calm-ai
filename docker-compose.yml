@@ -1,0 +1,40 @@
+# HTTPS deployment for a single VM:  docker compose up -d --build
+# Prerequisites: a DNS A/AAAA record for CALM_DOMAIN pointing at this host, ports 80+443 open,
+# and a filled-in .env (see .env.example). Secrets are read at runtime; never baked into the image.
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      CALM_TRUST_PROXY: "1"          # Caddy sets X-Forwarded-For
+      CALM_PUBLIC_URL: "https://${CALM_DOMAIN}"
+    volumes: [calm-data:/data]
+    restart: unless-stopped
+
+  # Sends due reminders every 15 minutes (docs/push-notifications.md). Same image and database.
+  push-sweep:
+    build: .
+    env_file: .env
+    environment:
+      CALM_PUBLIC_URL: "https://${CALM_DOMAIN}"
+    volumes: [calm-data:/data]
+    command: ["sh", "-c", "while true; do npm run --silent push:sweep; sleep 900; done"]
+    depends_on: [app]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      CALM_DOMAIN: ${CALM_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app]
+    restart: unless-stopped
+
+volumes:
+  calm-data:
+  caddy-data:
+  caddy-config:
