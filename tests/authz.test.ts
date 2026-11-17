@@ -1,8 +1,3 @@
-/**
- * Security tests: authentication, authorization coverage, cross-user isolation,
- * CSRF, sessions, throttling, export/deletion, demo separation, migrations.
- * Route handlers are invoked exactly as Next.js invokes them: with a Request.
- */
 process.env.CALM_DB_PATH = ":memory:";
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -25,7 +20,6 @@ function req(method: string, url: string, opts: { token?: string | null; body?: 
   return new Request(ORIGIN + url, { method, headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined });
 }
 
-// Discover every API route file on disk, so a new route can't silently skip these tests.
 function apiRoutes() {
   const base = path.join(ROOT, "app/api");
   const out: { name: string; file: string }[] = [];
@@ -50,7 +44,6 @@ async function newUser(email: string) {
 
 beforeEach(() => { useDatabase(); });
 
-// ---------- coverage ----------
 test("coverage: every API route handler is built with route(), and only allow-listed routes are public", () => {
   const routes = apiRoutes();
   assert.ok(routes.length >= 18, `found ${routes.length} routes`);
@@ -133,14 +126,12 @@ test("sessions: tokens are stored only as hashes; passwords only as scrypt", asy
   assert.match(dump, /scrypt\$32768\$8\$1\$/);
 });
 
-// ---------- isolation ----------
 test("isolation: user B cannot read, change or delete user A's data through any route", async () => {
   const A = await newUser("alice@example.com");
   const B = await newUser("bob@example.com");
   const call = async (name: string, m: (typeof METHODS)[number], token: string, url = `/api/${name}`, body?: unknown) =>
     (await load(name))[m]!(req(m, url, { token, body }));
 
-  // A creates one of everything
   assert.equal((await call("checkins", "POST", A.token, undefined, { mood: 6, energy: 6, stress: 4, tags: ["secret-a"], note: "alice private note" })).status, 200);
   const mem = await (await call("memories", "POST", A.token, undefined, { kind: "note", text: "alice memory" })).json();
   await call("circle", "POST", A.token, undefined, { name: "Alice's friend", relation: "Friend" });
@@ -152,7 +143,6 @@ test("isolation: user B cannot read, change or delete user A's data through any 
   const aCircleId = (db().prepare("SELECT id FROM circle WHERE user_id = ?").get(A.user.id) as { id: number }).id;
   const before = countUserRows(A.user.id);
 
-  // B attacks A's rows by id
   assert.equal((await call("memories", "PATCH", B.token, undefined, { id: mem.memory.id, text: "pwned", pinned: true })).status, 400);
   assert.equal((await call("memories", "DELETE", B.token, `/api/memories?id=${mem.memory.id}`)).status, 400);
   assert.equal((await call("checkins", "DELETE", B.token, `/api/checkins?id=${aCheckinId}`)).status, 400);
@@ -160,13 +150,11 @@ test("isolation: user B cannot read, change or delete user A's data through any 
   await call("reset", "POST", B.token);
   await call("companion", "DELETE", B.token);
 
-  // A's data is untouched
   assert.deepEqual(countUserRows(A.user.id), before);
   const target = listMemories(A.user.id).find((m) => m.id === mem.memory.id)!;
   assert.equal(target.text, "alice memory");
   assert.equal(target.pinned, false);
 
-  // B's reads contain nothing of A's
   for (const [name, m] of [["export", "GET"], ["summary", "GET"], ["account", "GET"]] as const) {
     const text = await (await call(name, m, B.token)).text();
     for (const secret of ["alice", "Alice", "secret-a", "study"]) assert.ok(!text.includes(secret), `${name} leaked "${secret}" to B`);
@@ -182,7 +170,6 @@ test("isolation: B's export contains only B; no credentials or session data in a
   for (const bad of ["password", "scrypt", "token", A.token]) assert.ok(!exp.includes(bad), `export contains ${bad}`);
 });
 
-// ---------- CSRF ----------
 test("CSRF: state-changing requests from another origin are rejected, even with a valid session", async () => {
   const A = await newUser("csrf@example.com");
   const mod = await load("memories");
@@ -195,7 +182,6 @@ test("CSRF: state-changing requests from another origin are rejected, even with 
   assert.equal(del.status, 403);
 });
 
-// ---------- login, logout, throttling ----------
 test("login: sets an HttpOnly SameSite cookie; logout revokes the session server-side", async () => {
   await register("login@example.com", "correct horse battery");
   const res = await (await load("auth/login")).POST!(req("POST", "/api/auth/login", { body: { email: "LOGIN@example.com ", password: "correct horse battery" } }));
@@ -247,7 +233,6 @@ test("password change: requires the current password and signs out other session
   assert.ok(await login("pw@example.com", "new long password"));
 });
 
-// ---------- deletion ----------
 test("account deletion: requires password, cascades every row and session, leaves others intact", async () => {
   const A = await newUser("del-a@example.com");
   const B = await newUser("del-b@example.com");
@@ -267,7 +252,6 @@ test("account deletion: requires password, cascades every row and session, leave
   assert.equal(listMemories(B.user.id).length, 1);
 });
 
-// ---------- demo separation ----------
 test("demo: real accounts can't load demo data; demo accounts are separate and credential-less", async () => {
   const A = await newUser("real@example.com");
   const demoRes = await (await load("demo")).POST!(req("POST", "/api/demo", { token: A.token, body: {} }));
@@ -284,7 +268,6 @@ test("demo: real accounts can't load demo data; demo accounts are separate and c
   assert.equal(row.password_hash, null);
 });
 
-// ---------- migrations ----------
 function legacyDb() {
   const d = new Database(":memory:");
   d.exec(`CREATE TABLE checkins (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, mood INTEGER NOT NULL, energy INTEGER NOT NULL,
