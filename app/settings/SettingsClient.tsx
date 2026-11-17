@@ -24,7 +24,6 @@ export function SettingsClient({ settings, configured, isDemo, email, deviceSlot
   const [dangerErr, setDangerErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Remove this device's push subscription first, so a shared device stops receiving reminders.
   async function signOut() { await unsubscribePush(); await api("/api/auth/logout", "POST"); router.push("/login"); router.refresh(); }
 
   async function update(p: Partial<Settings>) {
