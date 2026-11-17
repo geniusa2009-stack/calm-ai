@@ -11,13 +11,11 @@ export type Validated = { ok: true; reading: Reading } | { ok: false; reason: st
 
 function parseTime(v: unknown) {
   if (typeof v !== "string" || v.length > 40) return null;
-  // Require an explicit offset or Z so readings can't silently shift by the server's zone.
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(v)) return null;
   const t = Date.parse(v);
   return Number.isFinite(t) ? t : null;
 }
 
-/** Validate and normalise one untrusted reading. Never clamps: bad data is rejected with a reason. */
 export function validateReading(raw: unknown, provider: string, now = Date.now()): Validated {
   if (!raw || typeof raw !== "object") return { ok: false, reason: "not an object" };
   const r = raw as Partial<RawReading>;
@@ -56,7 +54,6 @@ export function validateReading(raw: unknown, provider: string, now = Date.now()
     if (typeof r.id !== "string" || !r.id.trim() || r.id.length > 200) return { ok: false, reason: "id must be a non-empty string ≤200 chars" };
     externalId = r.id.trim();
   } else {
-    // No source id: derive one from content, so an identical re-delivery is a duplicate.
     externalId = "h:" + crypto.createHash("sha256").update(`${kind}|${start}|${end}|${value}`).digest("hex").slice(0, 32);
   }
 
