@@ -10,7 +10,6 @@ export async function api<T = unknown>(url: string, method: string, body?: unkno
   return data as T;
 }
 
-/** The browser's IANA zone, if it reports one. */
 export function detectedTimeZone(): string | undefined {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; }
 }
