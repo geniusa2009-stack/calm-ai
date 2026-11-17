@@ -1,87 +1,91 @@
 # Calm
 
-A prototype for personal wellbeing tracking. It learns what *your* usual looks like from short check-ins, notices slow drifts away from it, and suggests support that has actually worked for *you*. It is not a diagnosis tool, a medical device, or a crisis service, and it makes no claim of clinical validity.
+Calm is a personal wellbeing tracker built around a simple idea: meaningful changes are easier to spot when you compare them with your own usual patterns, rather than someone else's.
 
-**Status:** a working multi-user prototype. It has **not** been security-reviewed or validated on real users. See `SECURITY.md` and `docs/ENGINE_AUDIT.md`.
+A short daily check-in records stress, mood, energy, and optional context. Over time, Calm builds a personal baseline, highlights sustained changes, and recommends short exercises based on what has helped before.
 
-## Run it locally
+Calm is a working prototype, not a medical device or a substitute for professional care. Its analysis has been evaluated with synthetic data, not validated in clinical studies or with real users. The application has not had an independent security review.
 
-Requires Node 20+ (tested on Node 22). On Linux, `better-sqlite3` builds natively, so you need the usual build tools.
+## Getting started
+
+You'll need Node.js 20 or later. Native build tools may also be needed for `better-sqlite3` on Linux.
 
 ```bash
 npm install
-npm test               # typecheck isn't included; run `npm run typecheck` too
-npm run dev            # http://localhost:3000
-# or, production mode:
-npm run build && npm start
+npm run typecheck
+npm test
+npm run dev
 ```
 
-Open the app. You can **create an account**, or click **Try the demo** for a throwaway account with six weeks of made-up data (deleted after 48 hours).
+Open http://localhost:3000 to create an account or use the demo with synthetic data. Demo accounts expire after 48 hours.
 
-Optional environment variables (see `.env.example`; put real values in `.env`, which is git-ignored):
-
-| Variable | Purpose |
-|---|---|
-| `ANTHROPIC_API_KEY` | Turns on the AI companion. Everything else works without it. |
-| `CALM_COMPANION_MODEL` | Override the companion model (default `claude-opus-5-5`). |
-| `CALM_DB_PATH` | SQLite file (default `./data/calm.db`, git-ignored). |
-| `CALM_TRUST_PROXY=1` | Trust `X-Forwarded-For` for rate limiting. Only set this behind a proxy you control. |
-| `CALM_INSECURE_COOKIES=1` | Drop the `Secure` cookie flag in production mode for plain-HTTP testing on a non-localhost host. |
-
-Other scripts:
-- `npm run seed`: create a demo account from the CLI.
-- `npm run claim-legacy -- you@example.com`: move data from the old single-user version into a registered account.
-- `npx tsx scripts/audit-engine.ts`: re-run the engine measurements.
-
-Schema migrations run automatically on startup.
-
-## What's in it
-
-| Area | Where |
-|---|---|
-| **Accounts and sessions**: scrypt passwords, hashed session tokens, CSRF checks, throttling, password change, account deletion | `lib/auth.ts`, `lib/http.ts`, `lib/session.ts`, `app/api/auth/*` |
-| **Per-user data isolation** on every table and query | `lib/db.ts`, `lib/migrations.ts` |
-| **Calm Pulse**: state relative to your own baseline, with drivers and a confidence heuristic | `lib/engine/pulse.ts`, `baseline.ts` |
-| **Early Shift Radar**: multi-day shifts scaled to your own variability, plus long-horizon drift | `lib/engine/radar.ts` |
-| **Context patterns**: Welch t-tests with Benjamini–Hochberg FDR | `lib/engine/context.ts`, `stats.ts` |
-| **Recovery tracking**, with check-in gaps flagged as uncertain | `lib/engine/recovery.ts` |
-| **Support Engine / Calm Window**: 8 tools, ranked by personal efficacy | `lib/engine/support.ts`, `app/support` |
-| **Weekly insights** with "does this fit?" feedback, **What-If Lab**, **Personal Memory** | `lib/engine/insights.ts`, `whatif.ts`, `app/memory` |
-| **Modes**, **smart nudges**, **Trusted Circle**, **Professional Bridge** | `lib/modes.ts`, `lib/snapshot.ts`, `app/circle` |
-| **AI companion** with guardrails, optional | `lib/companion.ts` |
-| **Safety layer**: deterministic crisis detection that runs before any model call | `lib/safety.ts` |
-| **Passive signals**: provider interface, validated JSON import, demo provider | `lib/signals/*`, see `docs/SIGNALS.md` |
-| **Data rights**: export, wipe data, delete account | `app/api/export`, `app/api/reset`, `app/api/account` |
-| **Design system and motion**: tokens, `PageHeader`, `EmptyState`, `Notice`, `Dialog`, skeletons, page transitions, reduced motion | `app/globals.css`, `components/ui/*`, `app/template.tsx`, `app/loading.tsx` |
-| **Optional device setup**: reminders, screen-on during sessions, haptic cues; never prompts unasked | `app/setup/devices`, `app/settings/DevicePermissions.tsx`, `lib/device/*` |
-
-## Tests
-
-`npm test` runs 93 tests:
-- **Engine:** baselines, pulse, radar, context, recovery, support, what-if and insights.
-- **Scenarios:** stable, noisy, abrupt, gradual, missing data, leakage and ordering, all on seeded synthetic data.
-- **Security:** route-coverage scan, 401 on every protected handler, cross-user read/update/delete attempts, CSRF, sessions, throttling, deletion cascade, demo separation, migrations.
-- **Signals:** validation, duplicates, corrections, out-of-order and delayed data, overlap, timezone, isolation.
-- **Device:** every permission outcome (granted, denied, dismissed, unsupported, no re-prompt after denial), reminder policy, reduced motion, and static checks that nothing else can prompt and that location, microphone, camera and motion sensors are never used.
-
-Browser checks (`e2e/ui.e2e.cjs`, 21 journeys at phone, tablet and desktop sizes) run against a live server using the Playwright installed on the machine:
+For a production-mode build:
 
 ```bash
-npm run build && CALM_DB_PATH=/tmp/calm-e2e.db npm start -- -p 3100   # in one terminal
-E2E_URL=http://localhost:3100 npm run e2e                             # in another
+npm run build
+npm start
 ```
 
-## Docs
+## What Calm includes
 
-- `SECURITY.md`: security model, findings and fixes, known gaps.
-- `docs/ENGINE_AUDIT.md`: measured false-alarm and detection rates, statistical limitations.
-- `docs/SIGNALS.md`: what is and isn't integrated, the import format, how to add a provider.
-- `docs/UX.md`: design tokens, motion and reduced-motion rules, device capabilities and their exact browser limits.
+- **Daily check-ins:** quick mood, stress, and energy tracking, with optional details.
+- **Calm Pulse:** a snapshot of the day compared with a personal baseline.
+- **Early Shift Radar:** signals for persistent changes and longer-term drift.
+- **Patterns and insights:** statistical associations, confidence labels, and feedback.
+- **Support tools:** short activities ranked by their observed effect for the individual.
+- **Memory and What-If Lab:** personal notes and exploratory projections.
+- **Trusted Circle:** a way to connect personal support with routes to professional help.
+- **Optional AI companion:** short, reflective responses powered by the Anthropic Claude API. The companion is disabled without an API key; the rest of Calm remains usable.
+- **Privacy controls:** account sessions, per-user data isolation, data export, reset, and account deletion.
+- **Device features:** optional reminders and other supported capabilities, requested only when needed.
 
-## Known limitations
+The companion is separate from the statistical engine. A deterministic safety check runs before model requests. Neither component provides a diagnosis or treatment recommendation.
 
-- **Not clinically validated.** The thresholds were tuned on synthetic data only.
-- **No live wearable integrations.** There's file import and a demo provider only.
-- **Time zones:** check-in days are grouped in the **server's** time zone. Wearable readings can carry a device offset, but check-ins can't yet.
-- **Deployment:** single process with SQLite. No email verification, password reset or MFA, and no scheduled sync jobs.
-- **Reminders** (browser notifications) arrive only while Calm is open in a tab. There's no push server, so nothing is delivered when the browser is closed. iPhone needs Calm added to the Home Screen. Haptic cues don't work on iOS Safari.
+## Configuration
+
+Create a local `.env` file if you need to override the defaults. It is excluded from Git.
+
+| Variable | Use |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Enables the optional Claude companion |
+| `CALM_COMPANION_MODEL` | Selects the companion model; defaults to `claude-opus-5-5` |
+| `CALM_DB_PATH` | SQLite database path; defaults to `./data/calm.db` |
+| `CALM_TRUST_PROXY=1` | Trusts forwarded client IPs for rate limiting; enable only behind a controlled proxy |
+| `CALM_INSECURE_COOKIES=1` | Allows plain-HTTP cookies in production mode for local testing only |
+
+See `.env.example` for the full configuration.
+
+## Useful commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run typecheck` | TypeScript type checking |
+| `npm test` | Unit and integration tests |
+| `npm run build` | Production build |
+| `npm run seed` | Create a demo account from the command line |
+| `npx tsx scripts/audit-engine.ts` | Reproduce engine measurements |
+
+For browser testing, build and start Calm on a separate port, then point the E2E runner to it:
+
+```bash
+CALM_DB_PATH=/tmp/calm-e2e.db npm start -- -p 3100
+```
+
+In a second terminal:
+
+```bash
+E2E_URL=http://localhost:3100 npm run e2e
+```
+
+## Project documentation
+
+- [Security](SECURITY.md) — implemented protections, outstanding risks, and review notes.
+- [Engine audit](docs/ENGINE_AUDIT.md) — synthetic-data measurements and statistical limitations.
+- [Signals](docs/SIGNALS.md) — import format, available providers, and integration boundaries.
+- [Experience and accessibility](docs/UX.md) — interface, motion, and device behavior.
+
+## Before real-world use
+
+Calm still needs independent security testing, stronger account recovery and verification, and validation with consenting participants. Synthetic tests cannot establish clinical accuracy or real-world effectiveness.
+
+Treat the product as an experimental wellbeing tool until those gaps have been addressed.
