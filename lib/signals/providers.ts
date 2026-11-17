@@ -1,16 +1,11 @@
 import type { RawReading, SignalProvider, SyncContext } from "./types";
 
-/**
- * Provider registry. `status` is shown to users verbatim — keep it truthful.
- * Only "implemented" and "demo" providers can produce data.
- */
 
 function rng(seed: number) {
   let s = seed >>> 0;
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
 
-/** Deterministic synthetic signals. Only ever runs for demo accounts. */
 export const demoProvider: SignalProvider = {
   id: "demo",
   name: "Demo wearable",
@@ -34,7 +29,6 @@ export const demoProvider: SignalProvider = {
   },
 };
 
-/** Push-only: the user uploads readings they exported themselves. Implemented. */
 export const fileImportProvider: SignalProvider = {
   id: "file-import",
   name: "File import (JSON)",
