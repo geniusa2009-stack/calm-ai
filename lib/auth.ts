@@ -2,17 +2,6 @@ import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { db, type UserId } from "./db";
 
-/**
- * Authentication & sessions, built on node:crypto only (no extra dependencies).
- *
- * - Passwords: scrypt (N=2^15, r=8, p=1), 16-byte random salt, constant-time compare.
- * - Sessions: 32 random bytes as an opaque cookie token. Only its SHA-256 is stored,
- *   so a database leak does not yield usable sessions. 30-day absolute lifetime,
- *   14-day idle timeout, a new token on every login, all revoked on account deletion.
- * - Login throttling: failed attempts are counted per email and per client address.
- * - No server secret is required, so there is nothing to leak from source or env.
- */
-
 const scrypt = promisify(crypto.scrypt) as (pw: crypto.BinaryLike, salt: crypto.BinaryLike, keylen: number, opts: crypto.ScryptOptions) => Promise<Buffer>;
 const SCRYPT = { N: 2 ** 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 const KEYLEN = 32;
@@ -32,7 +21,6 @@ export class AuthError extends Error {
 
 export interface User { id: UserId; email: string | null; isDemo: boolean; createdAt: string }
 
-// ---------- passwords ----------
 export async function hashPassword(pw: string) {
   const salt = crypto.randomBytes(16);
   const key = await scrypt(pw.normalize("NFKC"), salt, KEYLEN, SCRYPT);
@@ -48,7 +36,6 @@ export async function verifyPassword(pw: string, stored: string) {
   return got.length === expected.length && crypto.timingSafeEqual(got, expected);
 }
 
-// Used when the email doesn't exist, so response time doesn't reveal which accounts exist.
 let dummyHash: Promise<string> | null = null;
 const getDummy = () => (dummyHash ??= hashPassword(crypto.randomBytes(16).toString("hex")));
 
@@ -65,7 +52,6 @@ export function checkPasswordPolicy(pw: unknown): string {
   return pw;
 }
 
-// ---------- throttling ----------
 function recentAttempts(key: string, minutes: number) {
   const since = new Date(Date.now() - minutes * 60e3).toISOString();
   return (db().prepare("SELECT COUNT(*) AS n FROM login_attempts WHERE key = ? AND ts >= ?").get(key, since) as { n: number }).n;
@@ -77,7 +63,6 @@ function pruneAttempts() {
   db().prepare("DELETE FROM login_attempts WHERE ts < ?").run(new Date(Date.now() - 24 * 3600e3).toISOString());
 }
 
-// ---------- users ----------
 type UserRow = { id: number; email: string | null; password_hash: string | null; is_demo: number; created_at: string };
 const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, isDemo: !!r.is_demo, createdAt: r.created_at });
 
@@ -103,8 +88,6 @@ export async function login(emailIn: unknown, pwIn: unknown, client = "unknown")
   const email = typeof emailIn === "string" ? emailIn.trim().toLowerCase() : "";
   const pw = typeof pwIn === "string" ? pwIn.slice(0, PASSWORD_MAX) : "";
   const ek = `login:${email}`, ik = `ip:${client}`;
-  // The per-address bucket only applies when the real client address is known (CALM_TRUST_PROXY);
-  // otherwise every caller shares one key and a single attacker could lock everyone out.
   const ipKnown = client !== "unknown" && client !== "direct";
   if (recentAttempts(ek, LIMITS.email.minutes) >= LIMITS.email.max || (ipKnown && recentAttempts(ik, LIMITS.ip.minutes) >= LIMITS.ip.max)) {
     throw new AuthError("Too many attempts. Wait 15 minutes and try again.", 429);
@@ -132,12 +115,10 @@ export async function changePassword(uid: UserId, current: unknown, next: unknow
   }
   const hash = await hashPassword(checkPasswordPolicy(next));
   db().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, uid);
-  // Sign out every other device.
   const keep = keepToken ? hashToken(keepToken) : "";
   db().prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?").run(uid, keep);
 }
 
-/** Permanently delete the account. ON DELETE CASCADE removes every owned row and session. */
 export async function deleteAccount(uid: UserId, password: unknown, beforeDelete?: () => Promise<void>) {
   const row = db().prepare("SELECT * FROM users WHERE id = ?").get(uid) as UserRow | undefined;
   if (!row) throw new AuthError("Account not found.", 404);
@@ -146,13 +127,10 @@ export async function deleteAccount(uid: UserId, password: unknown, beforeDelete
       throw new AuthError("Password is incorrect.", 401);
     }
   }
-  // Runs only after the password check: revoke external grants, then cascade-delete everything.
   if (beforeDelete) await beforeDelete();
   db().prepare("DELETE FROM users WHERE id = ?").run(uid);
 }
 
-// ---------- demo accounts ----------
-/** A throwaway account with no credentials. Demo data never touches real accounts. */
 export function createDemoUser(): User {
   cleanupDemoUsers();
   const info = db().prepare("INSERT INTO users (email, password_hash, is_demo, created_at) VALUES (NULL, NULL, 1, ?)").run(new Date().toISOString());
@@ -162,7 +140,6 @@ export function cleanupDemoUsers() {
   db().prepare("DELETE FROM users WHERE is_demo = 1 AND created_at < ?").run(new Date(Date.now() - 2 * DEMO_HOURS * 3600e3).toISOString());
 }
 
-// ---------- sessions ----------
 export const hashToken = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
 export function createSession(uid: UserId, demo = false) {
@@ -174,7 +151,6 @@ export function createSession(uid: UserId, demo = false) {
   return { token, expires };
 }
 
-/** Resolve a cookie token to a user, enforcing absolute and idle expiry. */
 export function userForToken(token: string | undefined | null): User | null {
   if (!token || token.length > 100) return null;
   const h = hashToken(token);
@@ -196,8 +172,6 @@ export function destroySession(token: string | undefined | null) {
   if (token) db().prepare("DELETE FROM sessions WHERE token_hash = ?").run(hashToken(token));
 }
 
-// ---------- legacy data (from the single-user version) ----------
-/** Operator-only: move data from the locked legacy owner to a registered account. */
 export function claimLegacy(targetEmail: string) {
   const target = db().prepare("SELECT id FROM users WHERE email = ? AND is_demo = 0 AND is_legacy = 0").get(normalizeEmail(targetEmail)) as { id: number } | undefined;
   if (!target) throw new AuthError("No registered account with that email.");
@@ -207,7 +181,6 @@ export function claimLegacy(targetEmail: string) {
     for (const t of ["checkins", "support_sessions", "memories", "circle", "companion_messages", "signal_readings"]) {
       db().prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(target.id, legacy.id);
     }
-    // keyed tables: the target's own values win on conflict
     db().prepare("INSERT OR IGNORE INTO settings (user_id, key, value) SELECT ?, key, value FROM settings WHERE user_id = ?").run(target.id, legacy.id);
     db().prepare("INSERT OR IGNORE INTO insight_feedback (user_id, key, rating, ts) SELECT ?, key, rating, ts FROM insight_feedback WHERE user_id = ?").run(target.id, legacy.id);
     db().prepare("DELETE FROM users WHERE id = ?").run(legacy.id);
