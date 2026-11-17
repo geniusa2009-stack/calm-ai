@@ -1,4 +1,3 @@
-// Dev aid: print what the engine concludes from demo data.
 process.env.CALM_DB_PATH = process.env.CALM_DB_PATH || ":memory:";
 import { seedDemo } from "../lib/seed";
 import { createDemoUser } from "../lib/auth";
