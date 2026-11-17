@@ -10,7 +10,6 @@ export const GET = route((_req, { user }) => ({
   connections: connections(user.id),
 }));
 
-/** Remove everything one provider contributed. */
 export const DELETE = route((req, { user }) => {
   const id = new URL(req.url).searchParams.get("provider") ?? "";
   if (!providerById(id)) throw new BadRequest("Unknown provider");
