@@ -32,13 +32,11 @@ export function DeviceSetupFlow({ initialStep, prefs }: { initialStep: number; p
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [on, setOn] = useState(prefs);
-  // Capability support is read after mount (never during SSR) — reading it never prompts.
   const [support, setSupport] = useState<{ notif: string; wake: string; vib: string } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const step = STEPS[i];
 
   useEffect(() => { setSupport({ notif: notificationState(), wake: wakeLockState(), vib: vibrationState() }); }, []);
-  // Move focus to the new step's heading so screen reader and keyboard users follow along.
   useEffect(() => { if (i > 0) headingRef.current?.focus(); }, [i]);
 
   const save = (p: object) => api("/api/settings", "POST", p).catch(() => { /* non-blocking: progress save is best effort */ });
