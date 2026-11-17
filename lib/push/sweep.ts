@@ -4,11 +4,6 @@ import { dueReminders } from "./schedule";
 import { sendToUser, vapidConfig, type Sender } from "./send";
 import { localDate as toLocalDate, resolveTimeZone } from "../time";
 
-/**
- * One scheduler pass over users who opted in and have a subscription. Run every 15–30 min
- * from cron (`npm run push:sweep`). Duplicate-safe: the (user, kind, local_date) row is
- * claimed BEFORE sending, so overlapping runs cannot both send.
- */
 export async function runSweep(now = new Date(), send?: Sender) {
   const summary = { users: 0, sent: 0, skipped: 0, removed: 0, failed: 0 };
   if (!vapidConfig()) return { ...summary, configured: false };
