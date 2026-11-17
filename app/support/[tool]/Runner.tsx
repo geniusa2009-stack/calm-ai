@@ -155,7 +155,6 @@ function Soundscape({ minutes, onDone }: { minutes: number; onDone: () => void }
   );
 }
 
-/** Hold a screen wake lock while `active`; re-acquire when the tab becomes visible again. */
 function useSessionWakeLock(active: boolean) {
   const [held, setHeld] = useState(false);
   useEffect(() => {
