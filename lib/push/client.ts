@@ -1,8 +1,4 @@
 "use client";
-/**
- * Browser side of Web Push. Never requests permission itself: callers only subscribe after
- * permission is already "granted" (requested from an explicit click in the device setup).
- */
 export function pushSupported() {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && typeof Notification !== "undefined";
 }
@@ -20,7 +16,6 @@ async function serverKey(): Promise<string | null> {
 
 export type PushSetup = "subscribed" | "unsupported" | "not-configured" | "no-permission" | "failed";
 
-/** Subscribe this device (permission must already be granted). */
 export async function subscribePush(): Promise<PushSetup> {
   if (!pushSupported()) return "unsupported";
   if (Notification.permission !== "granted") return "no-permission";
@@ -34,7 +29,6 @@ export async function subscribePush(): Promise<PushSetup> {
   } catch { return "failed"; }
 }
 
-/** Unsubscribe this device locally and on the server. */
 export async function unsubscribePush() {
   if (!pushSupported()) return;
   try {
