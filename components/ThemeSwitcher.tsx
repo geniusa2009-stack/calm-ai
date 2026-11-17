@@ -9,7 +9,6 @@ const OPTIONS: { id: ThemePref; label: string; hint: string }[] = [
   { id: "system", label: "System", hint: "Follow this device's setting" },
 ];
 
-/** Apply a theme instantly (no reload) with a short colour cross-fade, and remember it. */
 export function applyTheme(t: ThemePref) {
   const root = document.documentElement;
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -18,7 +17,6 @@ export function applyTheme(t: ThemePref) {
     window.setTimeout(() => root.classList.remove("theme-switching"), 450);
   }
   if (t === "system") delete root.dataset.theme; else root.dataset.theme = t;
-  // 1 year; Lax; readable by the server so the next page render uses the same theme.
   document.cookie = `${THEME_COOKIE}=${t}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
