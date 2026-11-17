@@ -2,22 +2,6 @@ import type { Day } from "./days";
 import { addDays, weekdayOf } from "./days";
 import { bhAdjust, linreg, mean, pearson, pearsonP, round, sd, welch } from "./stats";
 
-/**
- * Context intelligence: which tags, sleep amounts and weekdays go with
- * changes in how this person feels.
- *
- * Statistical approach (deliberately simple and explainable):
- * - Each candidate is a Welch t-test (tagged vs untagged days), with a
- *   proper t-distribution p-value using Welch–Satterthwaite df, so small
- *   samples are penalised correctly.
- * - Every candidate tested in one call is corrected together with
- *   Benjamini–Hochberg (false discovery rate), because a person with 8 tags
- *   generates ~50 tests and some would pass by chance.
- * - An effect-size floor stops tiny-but-"significant" differences.
- *
- * Known limits: days are not independent (bad weeks cluster), tags co-occur
- * (confounding), and these are associations, never causes.
- */
 
 export type EffectMetric = "stress" | "mood" | "energy" | "sleepHours";
 export type Confidence = "low" | "medium" | "high";
@@ -41,7 +25,6 @@ export interface WeekdayPattern { weekday: string; diff: number; n: number; q: n
 const METRIC_WORD: Record<EffectMetric, string> = { stress: "stress", mood: "mood", energy: "energy", sleepHours: "sleep" };
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/** FDR thresholds for the labels the UI shows. */
 export const Q_HIGH = 0.01, Q_MEDIUM = 0.05, Q_SHOW = 0.1;
 export const MIN_TAG_DAYS = 3;
 
@@ -54,7 +37,6 @@ export function confidenceFromQ(q: number, n: number): Confidence | null {
   return null;
 }
 
-/** How each context tag relates to your metrics on the same day and the day after. */
 export function tagEffects(days: Day[]): ContextEffect[] {
   const byDate = new Map(days.map((d) => [d.date, d]));
   const tagCounts = new Map<string, number>();
@@ -91,7 +73,6 @@ export function tagEffects(days: Day[]): ContextEffect[] {
     }
   }
 
-  // Correct across *all* tests run, including ones we won't show.
   const qs = bhAdjust(cands.map((c) => c.p));
   const kept: ContextEffect[] = [];
   cands.forEach((c, i) => {
@@ -100,7 +81,6 @@ export function tagEffects(days: Day[]): ContextEffect[] {
     if (confidence) kept.push({ ...c, q: qs[i], confidence });
   });
 
-  // Keep the strongest effect per tag+metric (same-day vs next-day duplicates)
   const best = new Map<string, ContextEffect>();
   for (const e of kept) {
     const k = `${e.tag}:${e.metric}`;
@@ -110,7 +90,6 @@ export function tagEffects(days: Day[]): ContextEffect[] {
   return [...best.values()].sort((a, b) => rank[b.confidence] - rank[a.confidence] || Math.abs(b.d) - Math.abs(a.d));
 }
 
-/** Relationship between last night's sleep and today's state. */
 export function sleepLinks(days: Day[]): SleepLink[] {
   const rows = days.filter((d) => d.sleepHours != null);
   if (rows.length < 10) return [];
