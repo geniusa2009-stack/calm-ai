@@ -150,7 +150,6 @@ test("insights respect 'doesn't fit' feedback", () => {
 
 test("groupByDay averages multiple check-ins and unions tags", () => {
   const base: Omit<CheckIn, "id" | "ts" | "stress" | "tags"> = { mood: 5, energy: 5, focus: null, sleepHours: 7, sleepQuality: null, note: null, mode: "everyday", source: "manual", tz: null };
-  // Zone-explicit fixture: 09:00 and 18:00 on the same local day in Cairo.
   const days = groupByDay([
     { ...base, id: 1, ts: zonedTimeToUtc("2026-11-05", 9, 0, "Africa/Cairo").toISOString(), stress: 4, tags: ["a"] },
     { ...base, id: 2, ts: zonedTimeToUtc("2026-11-05", 18, 0, "Africa/Cairo").toISOString(), stress: 8, tags: ["b"], sleepHours: null },
