@@ -1,9 +1,3 @@
-/**
- * Web Push: subscription validation/storage/isolation, delivery bookkeeping, VAPID + payload
- * encryption, timezone-aware scheduling, duplicate prevention, deletion.
- * Delivery here is SIMULATED (a fake sender, or web-push's request builder) — not a real
- * push service and not a real device. See docs/push-notifications.md.
- */
 process.env.CALM_DB_PATH = ":memory:";
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -37,7 +31,6 @@ beforeEach(() => {
   process.env.CALM_VAPID_PUBLIC_KEY = vapid.publicKey; process.env.CALM_VAPID_PRIVATE_KEY = vapid.privateKey; process.env.CALM_VAPID_SUBJECT = "mailto:test@example.invalid";
 });
 
-// ---------- validation ----------
 test("subscription validation: https push services with real-sized keys only", () => {
   assert.ok(validateSubscription(fakeSubscription()));
   const good = fakeSubscription();
@@ -50,7 +43,6 @@ test("subscription validation: https push services with real-sized keys only", (
   for (const b of bad) assert.throws(() => validateSubscription(b), PushError, JSON.stringify(b)?.slice(0, 60));
 });
 
-// ---------- API + isolation ----------
 test("subscribe API: auth + CSRF + validation; 503 when push isn't configured", async () => {
   const u = await register("s@example.com", "correct horse battery");
   const t = createSession(u.id).token;
@@ -88,7 +80,6 @@ test("limits: at most 10 subscriptions per user; at most 20 changes per hour", a
   assert.throws(() => saveSubscription(u.id, validateSubscription(fakeSubscription()), null), (e: PushError) => e.status === 429);
 });
 
-// ---------- delivery ----------
 test("delivery: success recorded; 404/410 remove the subscription; repeated failures remove it; others kept", async () => {
   const u = await register("d@example.com", "correct horse battery");
   const s1 = validateSubscription(fakeSubscription()), s2 = validateSubscription(fakeSubscription());
@@ -127,7 +118,6 @@ test("no delivery at all when push isn't configured (no keys → nothing sent)",
   assert.equal((await runSweep(new Date(), okSender())).configured, false);
 });
 
-// ---------- scheduling (pure) ----------
 const base = { timezone: "Africa/Cairo", quietStart: 22, quietEnd: 8, notifyEnabled: true, pushCheckin: true, pushRadar: true, reminderHour: 19 };
 const at = (date: string, h: number, tz = "Africa/Cairo") => zonedTimeToUtc(date, h, 0, tz);
 
@@ -164,7 +154,6 @@ test("schedule: payloads are generic — no measurements, states, notes or names
   }
 });
 
-// ---------- sweep (scheduler + delivery + dedupe) ----------
 test("sweep: sends once per kind per local day, even across repeated runs; new local day sends again", async () => {
   const u = await register("sw@example.com", "correct horse battery");
   saveSettings(u.id, { ...base, onboarded: true });

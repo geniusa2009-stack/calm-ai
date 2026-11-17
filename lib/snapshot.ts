@@ -18,14 +18,11 @@ export function inQuietHours(s: Pick<Settings, "quietStart" | "quietEnd">, hour:
   return s.quietStart > s.quietEnd ? hour >= s.quietStart || hour < s.quietEnd : hour >= s.quietStart && hour < s.quietEnd;
 }
 
-/** Everything the app needs to render "today", computed once per request. */
 export function snapshot(uid: UserId, now = new Date()) {
   const settings = getSettings(uid);
-  // Every "what day / what hour is it" question below is answered in the person's zone.
   const tz = resolveTimeZone(settings.timezone);
   const checkins = listCheckIns(uid, 120);
   const sessions = listSessions(uid, 180);
-  // Passive signals only fill missing self-reported sleep (see lib/signals/daily.ts).
   const days = mergeSignals(groupByDay(checkins, tz), dailySignals(listReadings(uid, 120), tz));
   const pulse = computePulse(days, now, tz);
   const radar = scanRadar(days, now, MODES[settings.mode].radarSensitivity, tz);
@@ -33,7 +30,6 @@ export function snapshot(uid: UserId, now = new Date()) {
   const today = localDate(now, tz);
   const checkedInToday = days.at(-1)?.date === today;
 
-  // Smart nudges: few, relevant, respectful of quiet hours and mode.
   const nudges: Nudge[] = [];
   const quiet = inQuietHours(settings, localParts(now, tz).hour);
   if (settings.nudgesEnabled && !quiet) {
@@ -44,7 +40,6 @@ export function snapshot(uid: UserId, now = new Date()) {
     if (pos) nudges.push({ id: `pos:${pos.id}`, tone: "celebrate", text: pos.title + " — " + pos.suggestion, href: "/memory", cta: "Add a note" });
   }
 
-  // Professional bridge: sustained difficulty over two weeks suggests talking to someone.
   const series = strainSeries(days.filter((d) => daysBetween(d.date, today) < 21)).filter((s) => daysBetween(s.date, today) < 14);
   const hardDays = series.filter((s) => s.strain >= 0.75).length;
   const suggestProfessional = series.length >= 8 && hardDays >= Math.max(8, Math.ceil(series.length * 0.65));

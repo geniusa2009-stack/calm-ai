@@ -13,9 +13,7 @@ export interface Episode {
   days: number; // time from start until back within usual
   supportUsed: number;
   recoveryTags: string[];
-  /** Longest stretch without a check-in inside the episode, in days. */
   maxGap: number;
-  /** True when gaps make the duration unreliable; excluded from "typical". */
   uncertain: boolean;
 }
 
@@ -28,7 +26,6 @@ export interface RecoveryProfile {
 }
 
 const START = 1.2, END = 0.5, SEVERE = 2.2;
-/** An episode with a hole longer than this can't be timed honestly. */
 export const MAX_GAP_DAYS = 3;
 
 export function recoveryProfile(days: Day[], sessions: SupportSession[], tz: string = FALLBACK_TZ): RecoveryProfile {
@@ -36,8 +33,6 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[], tz: str
   const episodes: Episode[] = [];
   let cur: { start: string; peak: number } | null = null;
 
-  // An episode needs two consecutive check-ins above START (or one severe day);
-  // a single rough day is ordinary variation, not a "harder stretch".
   for (let i = 0; i < series.length; i++) {
     const s = series[i];
     const next = series[i + 1];
@@ -55,9 +50,7 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[], tz: str
 
   function finish(c: { start: string; peak: number }, end: string | null): Episode {
     const until = end ?? series.at(-1)!.date;
-    // Sessions are dated in the zone they happened in (local calendar date), like check-ins.
     const used = sessions.filter((x) => { const d = localDate(x.ts, x.tz ?? tz); return d >= c.start && d <= until; }).length;
-    // tags seen in the 3 days leading into the return to baseline
     const tagDays = end ? days.filter((d) => { const a = daysBetween(d.date, end); return a >= 0 && a <= 2; }) : [];
     const inside = series.filter((x) => x.date >= c.start && x.date <= until).map((x) => x.date);
     let maxGap = 0;
@@ -79,7 +72,6 @@ export function recoveryProfile(days: Day[], sessions: SupportSession[], tz: str
   }
   const tagFreq = new Map<string, number>();
   done.forEach((e) => e.recoveryTags.forEach((t) => tagFreq.set(t, (tagFreq.get(t) ?? 0) + 1)));
-  // A helper must show up in most recoveries AND be clearly more common then than on an average day.
   const base = (t: string) => days.filter((d) => d.tags.includes(t)).length / Math.max(days.length, 1);
   const recDays = done.reduce((a, e) => a + (e.recoveryTags.length ? 3 : 0), 0) || 1;
   const helpers = [...tagFreq.entries()]

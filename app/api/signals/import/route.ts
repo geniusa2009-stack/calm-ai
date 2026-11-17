@@ -5,7 +5,6 @@ import { BadRequest } from "@/lib/validate";
 
 const MAX_BYTES = 2_000_000;
 
-/** Push endpoint for user-supplied exports. Every reading is validated; nothing is trusted. */
 export const POST = route(async (req, { user }) => {
   const text = await req.text();
   if (text.length > MAX_BYTES) throw new BadRequest("File too large (max 2 MB). Split it into smaller imports.");

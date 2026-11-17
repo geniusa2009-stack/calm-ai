@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui";
 
-/** Shown while a server-rendered page loads. */
 export default function Loading() {
   return (
     <div className="stack lg" aria-busy="true" aria-live="polite">

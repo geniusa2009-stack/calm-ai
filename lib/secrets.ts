@@ -1,10 +1,5 @@
 import crypto from "node:crypto";
 
-/**
- * Encryption at rest for provider tokens (AES-256-GCM, random 96-bit IV per value,
- * authenticated). The key comes from CALM_TOKEN_KEY (32 random bytes, base64) and never
- * leaves the server. Without a key, integrations that need stored tokens are disabled.
- */
 const PREFIX = "v1";
 
 export function tokenKey(): Buffer | null {

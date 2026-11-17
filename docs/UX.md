@@ -52,11 +52,11 @@ Reusable pieces:
 
 | Capability | API | Prompt? | Used for | Status |
 |---|---|---|---|---|
-| Reminders | Notification API | Yes, only after tapping **Enable** | Generic check-in / radar reminders, max 2 a day, never in quiet hours | ✅ Implemented. **Only while Calm is open in a tab** (there's no push server or service worker push) |
-| Screen on | Screen Wake Lock API | No prompt exists | Holding the screen on while a guided session runs | ✅ Implemented. Released on finish or leave; re-acquired when the tab is visible again |
-| Haptic cues | Vibration API | No prompt exists | A short tap at each breathing phase | ✅ Implemented where supported. **Not available on iOS Safari** or most desktops |
-| Health / wearables | none in browsers | — | File import via `lib/signals` | ✅ Import only. Apple Health, Health Connect, Oura, Fitbit and Garmin are **not** connected (see `docs/SIGNALS.md`) |
-| Location, microphone, camera, motion sensors | — | Never | No existing feature needs them | ❌ Deliberately not used (enforced by a static test) |
+| Reminders | Notification API | Yes, only after tapping **Enable** | Generic check-in / radar reminders, max 2 a day, never in quiet hours | Implemented. **Only while Calm is open in a tab** (there's no push server or service worker push) |
+| Screen on | Screen Wake Lock API | No prompt exists | Holding the screen on while a guided session runs | Implemented. Released on finish or leave; re-acquired when the tab is visible again |
+| Haptic cues | Vibration API | No prompt exists | A short tap at each breathing phase | Implemented where supported. **Not available on iOS Safari** or most desktops |
+| Health / wearables | none in browsers | — | File import via `lib/signals` | Import only. Apple Health, Health Connect, Oura, Fitbit and Garmin are **not** connected (see `docs/SIGNALS.md`) |
+| Location, microphone, camera, motion sensors | — | Never | No existing feature needs them | Deliberately not used (enforced by a static test) |
 
 How the permissions behave:
 - **No surprise prompts.** Reading status never prompts. `requestNotifications()` is the only path to a prompt, and it's called only from click handlers in the setup flow and in Settings. Tests check both: a static scan, and an e2e run that counts prompts on every page load.

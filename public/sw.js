@@ -1,11 +1,3 @@
-/*
- * Calm service worker — deliberately conservative.
- *  - Caches ONLY content-hashed build assets (/_next/static/*), icons and the static offline page.
- *  - NEVER caches HTML pages or API responses, so no personal data is ever stored on the device,
- *    authentication always goes to the server, and new deployments are picked up immediately.
- *  - Navigations are network-first; only when the network fails is /offline.html shown.
- *  - Push notifications: shows the generic, lock-screen-safe text the server sends.
- */
 const VERSION = "calm-sw-v1";
 const STATIC_CACHE = `${VERSION}-static`;
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
@@ -21,7 +13,6 @@ self.addEventListener("activate", (event) => {
   })());
 });
 
-// The page asks before switching to a new worker, so an update never interrupts a session.
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
@@ -45,14 +36,11 @@ self.addEventListener("fetch", (event) => {
       return res;
     })());
   }
-  // Everything else (API, pages' data, exports) goes straight to the network, uncached.
 });
 
-// ---------- push ----------
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
-  // Only generic text is ever sent; fall back to a neutral message if the payload is missing.
   const title = typeof data.title === "string" ? data.title.slice(0, 60) : "Calm";
   const body = typeof data.body === "string" ? data.body.slice(0, 160) : "Open Calm when it suits you.";
   const tag = typeof data.tag === "string" ? data.tag.slice(0, 64) : "calm";
@@ -68,8 +56,6 @@ self.addEventListener("notificationclick", (event) => {
   })());
 });
 
-// The browser may rotate or expire a subscription; re-subscribe with the same server key
-// and tell the server. Uses the session cookie; fails harmlessly if signed out.
 self.addEventListener("pushsubscriptionchange", (event) => {
   event.waitUntil((async () => {
     const key = event.oldSubscription && event.oldSubscription.options && event.oldSubscription.options.applicationServerKey;

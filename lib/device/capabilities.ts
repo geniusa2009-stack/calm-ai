@@ -1,15 +1,3 @@
-/**
- * Device capabilities Calm can use in a web browser, behind feature detection.
- *
- * RULES (enforced by tests/device.test.ts):
- *  - Reading status never triggers a permission prompt.
- *  - A prompt only happens inside request*(), which the UI calls from an explicit click.
- *  - If the browser already says "denied", we do not ask again — we explain how to change it.
- *  - Nothing here reads, stores or transmits sensor, location or audio data.
- *
- * Everything takes an injectable `env` (defaults to the real browser globals) so the
- * granted / denied / dismissed / unsupported paths can be tested without a browser.
- */
 
 export interface NotificationLike {
   permission: "default" | "granted" | "denied";
@@ -36,11 +24,9 @@ export function browserEnv(): DeviceEnv {
   };
 }
 
-// ---------- notifications ----------
 export type NotificationState = "unsupported" | "insecure" | "prompt" | "granted" | "denied";
 export type RequestOutcome = "granted" | "denied" | "dismissed" | "unsupported" | "already-denied" | "already-granted" | "error";
 
-/** Current notification permission. NEVER prompts. */
 export function notificationState(env: DeviceEnv = browserEnv()): NotificationState {
   if (!env.Notification) return "unsupported";
   if (env.isSecureContext === false) return "insecure";
@@ -48,7 +34,6 @@ export function notificationState(env: DeviceEnv = browserEnv()): NotificationSt
   return p === "granted" ? "granted" : p === "denied" ? "denied" : "prompt";
 }
 
-/** Ask for notification permission. Call ONLY from a user gesture (button click). */
 export async function requestNotifications(env: DeviceEnv = browserEnv()): Promise<{ outcome: RequestOutcome; state: NotificationState }> {
   const state = notificationState(env);
   if (state === "unsupported" || state === "insecure") return { outcome: "unsupported", state };
@@ -63,10 +48,6 @@ export async function requestNotifications(env: DeviceEnv = browserEnv()): Promi
   }
 }
 
-/**
- * Show a local notification. Text is deliberately generic: notifications can appear
- * on a lock screen, so they never contain wellbeing details.
- */
 export function showNotification(title: string, body: string, env: DeviceEnv = browserEnv(), tag = "calm") {
   if (notificationState(env) !== "granted") return false;
   try {
@@ -78,12 +59,10 @@ export function showNotification(title: string, body: string, env: DeviceEnv = b
   }
 }
 
-// ---------- screen wake lock ----------
 export type WakeLockState = "unsupported" | "available";
 export const wakeLockState = (env: DeviceEnv = browserEnv()): WakeLockState =>
   env.navigator?.wakeLock && env.isSecureContext !== false ? "available" : "unsupported";
 
-/** Keep the screen on. No permission prompt exists for this API; it can still be refused (e.g. low battery, tab hidden). */
 export async function acquireWakeLock(env: DeviceEnv = browserEnv()) {
   if (wakeLockState(env) === "unsupported") return { ok: false as const, reason: "unsupported" };
   try {
@@ -94,18 +73,15 @@ export async function acquireWakeLock(env: DeviceEnv = browserEnv()) {
   }
 }
 
-// ---------- vibration ----------
 export type VibrationState = "unsupported" | "available";
 export const vibrationState = (env: DeviceEnv = browserEnv()): VibrationState =>
   typeof env.navigator?.vibrate === "function" ? "available" : "unsupported";
 
-/** A short, gentle tap. Silently does nothing where unsupported (e.g. iOS Safari). */
 export function tap(env: DeviceEnv = browserEnv(), pattern: number | number[] = 24) {
   if (vibrationState(env) === "unsupported") return false;
   try { return env.navigator!.vibrate!(pattern); } catch { return false; }
 }
 
-// ---------- capabilities Calm deliberately does NOT use ----------
 export const NOT_USED = [
   { id: "location", name: "Location", why: "No Calm feature needs to know where you are, so Calm never asks." },
   { id: "microphone", name: "Microphone", why: "Calm has no voice features. It never records or uploads audio." },
@@ -116,7 +92,6 @@ export const NOT_USED = [
 export const HEALTH_NOTE =
   "Web browsers can't read Apple Health, Health Connect or wearable sensors directly. Calm can import readings you export yourself; live connections to Apple Health, Health Connect, Oura, Fitbit and Garmin aren't available yet.";
 
-/** User-facing explanation for each outcome — accurate and pressure-free. */
 export function outcomeMessage(outcome: RequestOutcome): { tone: "success" | "info" | "warn" | "error"; title: string; body: string } {
   switch (outcome) {
     case "granted":

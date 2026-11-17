@@ -1,7 +1,6 @@
 import type { Day } from "../lib/engine/days";
 import { addDays, localDate } from "../lib/engine/days";
 
-/** Build `n` days ending today, with a per-day override function. */
 export function makeDays(n: number, f: (i: number, daysAgo: number) => Partial<Day> = () => ({})): Day[] {
   const today = localDate(new Date());
   return Array.from({ length: n }, (_, i) => {
@@ -12,5 +11,4 @@ export function makeDays(n: number, f: (i: number, daysAgo: number) => Partial<D
     };
   });
 }
-/** Small deterministic jitter so spreads aren't degenerate. */
 export const wobble = (i: number) => ((i * 37) % 7) / 7 - 0.43;

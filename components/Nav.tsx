@@ -14,13 +14,13 @@ const GROUPS: { label: string | null; links: L[] }[] = [
   { label: "Understand", links: [
     { href: "/patterns", label: "Patterns", ico: "∿" },
     { href: "/memory", label: "Memory", ico: "❖" },
-    { href: "/lab", label: "What-If Lab", ico: "⚗" },
+    { href: "/lab", label: "What-If Lab", ico: "◇" },
   ] },
   { label: "People", links: [
     { href: "/companion", label: "Companion", ico: "✎" },
     { href: "/circle", label: "Circle & help", ico: "♡" },
   ] },
-  { label: null, links: [{ href: "/settings", label: "Settings", ico: "⚙" }] },
+  { label: null, links: [{ href: "/settings", label: "Settings", ico: "○" }] },
 ];
 export const LINKS = GROUPS.flatMap((g) => g.links);
 const MOBILE_PRIMARY = ["/", "/check-in", "/support", "/patterns"];

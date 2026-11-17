@@ -13,7 +13,6 @@ export function median(xs: number[]) {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-/** Robust spread: scaled median absolute deviation, blended with SD so it is never degenerate. */
 export function robustSpread(xs: number[], floor: number) {
   if (xs.length < 2) return floor;
   const m = median(xs);
@@ -28,7 +27,6 @@ export function ewma(xs: number[], alpha = 0.4) {
   return v;
 }
 
-/** Least-squares slope per step. */
 export function slope(ys: number[]) {
   const n = ys.length;
   if (n < 3) return 0;
@@ -52,7 +50,6 @@ export function pearson(xs: number[], ys: number[]) {
   return dx && dy ? num / Math.sqrt(dx * dy) : NaN;
 }
 
-/** Simple OLS fit y = a + b x. */
 export function linreg(xs: number[], ys: number[]) {
   const mx = mean(xs), my = mean(ys);
   let num = 0, den = 0;
@@ -64,10 +61,8 @@ export function linreg(xs: number[], ys: number[]) {
 export const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 export const round = (x: number, d = 1) => Math.round(x * 10 ** d) / 10 ** d;
 
-// ---------- inference helpers ----------
 
 function lnGamma(x: number): number {
-  // Lanczos approximation (g = 7, n = 9)
   const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
     12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
   if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - lnGamma(1 - x);
@@ -78,7 +73,6 @@ function lnGamma(x: number): number {
   return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
 }
 
-/** Continued fraction for the regularized incomplete beta (Numerical Recipes `betacf`). */
 function betacf(a: number, b: number, x: number) {
   const MAXIT = 200, EPS = 3e-14, FPMIN = 1e-300;
   let c = 1, d = 1 - ((a + b) * x) / (a + 1);
@@ -102,7 +96,6 @@ function betacf(a: number, b: number, x: number) {
   return h;
 }
 
-/** Regularized incomplete beta I_x(a, b). */
 export function incBeta(x: number, a: number, b: number) {
   if (x <= 0) return 0;
   if (x >= 1) return 1;
@@ -110,13 +103,11 @@ export function incBeta(x: number, a: number, b: number) {
   return x < (a + 1) / (a + b + 2) ? (bt * betacf(a, b, x)) / a : 1 - (bt * betacf(b, a, 1 - x)) / b;
 }
 
-/** Two-sided p-value for Student's t with `df` degrees of freedom. */
 export function tPValue(t: number, df: number) {
   if (!Number.isFinite(t) || !(df > 0)) return 1;
   return incBeta(df / (df + t * t), df / 2, 0.5);
 }
 
-/** Welch's unequal-variance t-test. Returns t, Welch–Satterthwaite df and two-sided p. */
 export function welch(a: number[], b: number[]) {
   if (a.length < 2 || b.length < 2) return { t: 0, df: 0, p: 1 };
   const va = sd(a) ** 2, vb = sd(b) ** 2;
@@ -128,14 +119,12 @@ export function welch(a: number[], b: number[]) {
   return { t, df, p: tPValue(t, df) };
 }
 
-/** p-value for a Pearson correlation r over n pairs. */
 export function pearsonP(r: number, n: number) {
   if (!Number.isFinite(r) || n < 4) return 1;
   if (Math.abs(r) >= 1) return 0;
   return tPValue(r * Math.sqrt((n - 2) / (1 - r * r)), n - 2);
 }
 
-/** Benjamini–Hochberg adjusted p-values (q-values), in the input order. */
 export function bhAdjust(ps: number[]) {
   const m = ps.length;
   const order = ps.map((p, i) => [p, i] as const).sort((x, y) => x[0] - y[0]);

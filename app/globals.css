@@ -1,11 +1,5 @@
-/* =====================================================================
-   Calm design system
-   Tokens first; components consume tokens only. Motion uses transform and
-   opacity, and collapses to near-instant under prefers-reduced-motion.
-   ===================================================================== */
-
 :root {
-  /* colour — the ORIGINAL Calm palette (commit 0b75295), restored exactly. */
+  
   --bg: #f6f4ef;
   --surface: #fffdf9;
   --surface-2: #efece4;
@@ -24,8 +18,7 @@
   --care-soft: #f6e6dc;
   --celebrate-soft: #e3f0dc;
   --info-soft: #e6ecf3;
-  /* Tokens added by the redesign have no original value, so they are DERIVED from
-     the original colours above (no new hues are introduced). */
+  
   --bg-tint: color-mix(in srgb, var(--bg) 60%, var(--surface-2));
   --surface-3: color-mix(in srgb, var(--surface-2) 55%, var(--line));
   --line-strong: color-mix(in srgb, var(--line) 72%, var(--ink-3));
@@ -36,10 +29,7 @@
   --on-danger: #ffffff;
   --backdrop: color-mix(in srgb, var(--ink) 45%, transparent);
   --shimmer: rgba(255, 255, 255, 0.45);
-  /* TEXT roles: the original hue mixed toward the original ink, only where a colour is used
-     as small text on a light background, to keep WCAG AA (≥4.5:1). Fills, lines, chart
-     strokes and tints keep the exact original colours. In dark mode these mix toward the
-     light ink instead, which only raises contrast. */
+  
   --text-faint: color-mix(in srgb, var(--ink-3) 62%, var(--ink));
   --link: color-mix(in srgb, var(--accent) 85%, var(--ink));
   --stretch-text: color-mix(in srgb, var(--stretch) 50%, var(--ink));
@@ -49,7 +39,6 @@
   --low-text: color-mix(in srgb, var(--low) 68%, var(--ink));
   --bright-text: color-mix(in srgb, var(--bright) 55%, var(--ink));
 
-  /* type */
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --fs-xs: 0.78rem;
   --fs-sm: 0.88rem;
@@ -61,33 +50,27 @@
   --lh-tight: 1.2;
   --lh: 1.55;
 
-  /* space (4px grid) */
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
 
-  /* shape & elevation */
   --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
-  /* shadows use the original ink tint rgb(35, 48, 44) */
+  
   --shadow-1: 0 1px 2px rgba(35, 48, 44, 0.04);
   --shadow-2: 0 1px 2px rgba(35, 48, 44, 0.04), 0 4px 18px rgba(35, 48, 44, 0.05);
   --shadow-3: 0 2px 6px rgba(35, 48, 44, 0.06), 0 18px 48px rgba(35, 48, 44, 0.12);
 
-  /* motion */
   --dur-fast: 140ms;
   --dur: 240ms;
   --dur-slow: 420ms;
   --dur-pulse: 900ms;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1); /* gentle ease-out */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1); 
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --rise: 8px;
 
-  --tap: 44px; /* minimum touch target */
+  --tap: 44px; 
   --side-w: 232px;
   color-scheme: light;
 }
 
-/* Dark theme. One token set, applied when the person picks Dark, or picks System
-   (no data-theme) and the device prefers dark. Keep both copies identical —
-   tests/theme.test.ts checks this. */
 :root[data-theme="dark"] {
   --bg: #111716;
   --bg-tint: #151c1b;
@@ -160,7 +143,6 @@
 }
 :root[data-theme="light"] { color-scheme: light; }
 
-/* Smooth theme change (added for ~350ms by the theme switcher; instant under reduced motion). */
 html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {
   transition: background-color var(--dur-slow) var(--ease), color var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease),
     fill var(--dur-slow) var(--ease), stroke var(--dur-slow) var(--ease), box-shadow var(--dur-slow) var(--ease) !important;
@@ -168,11 +150,10 @@ html.theme-switching, html.theme-switching *, html.theme-switching *::before, ht
 
 @media (prefers-reduced-motion: reduce) {
   :root { --dur-fast: 1ms; --dur: 1ms; --dur-slow: 1ms; --dur-pulse: 1ms; --rise: 0px; }
-  /* Delays too: otherwise staggered content would stay invisible for up to ~280ms. */
+  
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; }
 }
 
-/* ---------- base ---------- */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 html, body { margin: 0; padding: 0; }
@@ -187,7 +168,7 @@ body {
 }
 a { color: var(--link); text-decoration: none; text-underline-offset: 3px; }
 a:hover { text-decoration: underline; }
-/* Links inside running text are underlined so they are not identified by colour alone (WCAG 1.4.1). */
+
 :is(p, li, dd, .lead, .muted, .faint, .notice-body) a:not(.btn):not(.chip) { text-decoration: underline; text-decoration-thickness: 1px; }
 :is(p, li, dd, .lead, .muted, .faint, .notice-body) a:not(.btn):not(.chip):hover { text-decoration-thickness: 2px; }
 h1, h2, h3 { line-height: var(--lh-tight); margin: 0 0 0.4em; font-weight: 650; letter-spacing: -0.015em; }
@@ -209,7 +190,6 @@ small, .muted { color: var(--ink-2); }
   border-radius: 6px;
 }
 
-/* ---------- layout ---------- */
 .shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: 100vh; }
 .side {
   position: sticky; top: 0; height: 100vh; padding: var(--s-6) var(--s-4);
@@ -245,7 +225,6 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .row { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
 .between { justify-content: space-between; }
 
-/* page header */
 .head { margin-bottom: var(--s-6); }
 .head h1 { margin-bottom: var(--s-2); }
 .head p { color: var(--ink-2); max-width: 62ch; font-size: var(--fs-md); }
@@ -255,7 +234,6 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-3); }
 .section-title h2 { margin: 0; }
 
-/* ---------- surfaces ---------- */
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
   padding: var(--s-6); box-shadow: var(--shadow-1); min-width: 0;
@@ -273,7 +251,6 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .calm-window { background: linear-gradient(160deg, var(--accent-softer), var(--surface) 70%); }
 .divider { height: 1px; background: var(--line); border: 0; margin: var(--s-4) 0; }
 
-/* ---------- buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
   min-height: var(--tap); padding: 0 var(--s-5); border: 1px solid transparent; border-radius: var(--r-pill);
@@ -296,7 +273,6 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .btn.block { width: 100%; }
 .btn .spinner { width: 16px; height: 16px; }
 
-/* ---------- chips, pills, badges ---------- */
 .chip {
   display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--s-3);
   border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: var(--r-pill);
@@ -313,7 +289,6 @@ main.bare { margin: 0 auto; max-width: 560px; padding: var(--s-10) var(--s-4) va
 .pill.sev-notice, .pill.warn { background: var(--warn-soft); color: var(--stretch-text); }
 .pill.sev-positive { background: var(--celebrate-soft); color: var(--bright); }
 
-/* ---------- forms ---------- */
 input[type="text"], input[type="number"], input[type="password"], input[type="email"], textarea, select {
   font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md);
   padding: 0 var(--s-3); min-height: var(--tap); width: 100%;
@@ -332,7 +307,6 @@ label.check { display: flex; align-items: center; gap: var(--s-2); min-height: v
 .slider input[type="range"] { width: 100%; accent-color: var(--accent); height: var(--tap); margin: 0; cursor: pointer; }
 .slider-ends { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-faint); }
 
-/* switch (a checkbox styled as a toggle; still a real checkbox for AT) */
 .switch { position: relative; display: inline-flex; align-items: center; gap: var(--s-3); min-height: var(--tap); cursor: pointer; }
 .switch input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-strong); position: relative; cursor: pointer; transition: background-color var(--dur) var(--ease); flex: none; margin: 0; }
 .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-1); transition: transform var(--dur) var(--ease); }
@@ -340,7 +314,6 @@ label.check { display: flex; align-items: center; gap: var(--s-2); min-height: v
 .switch input:checked::after { transform: translateX(18px); }
 .switch input:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ---------- feedback ---------- */
 .nudge, .notice { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); border: 1px solid transparent; }
 .nudge.info, .notice.info { background: var(--info-soft); }
 .nudge.care, .notice.care, .notice.error { background: var(--care-soft); }
@@ -371,7 +344,6 @@ details[open] > *:not(summary) { animation: fade-in var(--dur) var(--ease) both;
 .progress { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
 .progress > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; transform-origin: left; transition: transform var(--dur-slow) var(--ease); }
 
-/* ---------- chat ---------- */
 .chat { display: flex; flex-direction: column; gap: var(--s-3); max-height: 60vh; overflow-y: auto; padding: var(--s-1); }
 .bubble { max-width: 78%; padding: var(--s-3) var(--s-4); border-radius: 18px; white-space: pre-wrap; animation: rise var(--dur) var(--ease) both; }
 .bubble.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
@@ -381,7 +353,6 @@ details[open] > *:not(summary) { animation: fade-in var(--dur) var(--ease) both;
 .typing i:nth-child(2) { animation-delay: 0.15s; }
 .typing i:nth-child(3) { animation-delay: 0.3s; }
 
-/* ---------- breathing ---------- */
 .breath-stage { display: grid; place-items: center; padding: var(--s-2) 0 var(--s-4); }
 .breath-orb {
   width: 120px; height: 120px; border-radius: 50%;
@@ -392,7 +363,6 @@ details[open] > *:not(summary) { animation: fade-in var(--dur) var(--ease) both;
 }
 .breath-label { font-size: var(--fs-xl); font-weight: 620; margin-top: var(--s-5); text-align: center; min-height: 2em; }
 
-/* ---------- dialog / sheet ---------- */
 dialog.dialog {
   border: 1px solid var(--line); border-radius: var(--r-xl); padding: 0; background: var(--surface); color: var(--ink);
   width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-shadow: var(--shadow-3);
@@ -407,12 +377,10 @@ dialog.dialog::backdrop { background: var(--backdrop); animation: fade-in var(--
 dialog.dialog.sheet { margin: auto auto 0; width: 100vw; max-width: 100vw; border-radius: var(--r-xl) var(--r-xl) 0 0; border-bottom: 0; }
 dialog.dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease) both; }
 
-/* ---------- skeleton ---------- */
 .skeleton { position: relative; overflow: hidden; background: var(--surface-2); border-radius: var(--r-md); }
 .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--shimmer), transparent); animation: shimmer 1.4s var(--ease-in-out) infinite; }
 .spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.8s linear infinite; display: inline-block; opacity: 0.8; }
 
-/* ---------- motion ---------- */
 .page-enter { animation: rise var(--dur-slow) var(--ease) both; }
 .stagger > * { animation: rise var(--dur-slow) var(--ease) both; }
 .stagger > *:nth-child(2) { animation-delay: 50ms; }
@@ -435,13 +403,11 @@ dialog.dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease) both
 @keyframes dot { 0%, 80%, 100% { opacity: 0.3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
 @keyframes breathe-soft { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
-/* Under reduced motion, entrance animations become a plain fade (no movement). */
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .stagger > *, .step-enter, .bubble, dialog.dialog[open], dialog.dialog.sheet[open] { animation-name: fade-in; }
   .skeleton::after { animation: none; }
 }
 
-/* ---------- bottom nav (mobile) ---------- */
 .bottom-nav { display: none; }
 @media (max-width: 900px) {
   :root { --fs-2xl: 1.55rem; }
@@ -474,7 +440,6 @@ dialog.dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease) both
   main { padding: var(--s-8) var(--s-8) 96px; }
 }
 
-/* ---------- device setup ---------- */
 .setup-ico { width: 52px; height: 52px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--accent-softer); color: var(--accent); font-size: 1.5rem; }
 .setup h1 { font-size: var(--fs-xl); margin: 0; }
 .setup h1:focus { outline: none; }
@@ -491,7 +456,6 @@ dialog.dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease) both
 .perm-row:last-child { border-bottom: 0; }
 @media (max-width: 560px) { .perm-row { grid-template-columns: 1fr; } }
 
-/* ---------- toast & settings ---------- */
 .toast-region { position: fixed; right: var(--s-6); bottom: var(--s-6); z-index: 40; pointer-events: none; }
 .toast { background: var(--ink); color: var(--bg); padding: var(--s-2) var(--s-4); border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 600; box-shadow: var(--shadow-3); animation: rise var(--dur) var(--ease) both; }
 .toast.error { background: var(--danger-bg); color: var(--on-danger); }
@@ -499,7 +463,6 @@ dialog.dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease) both
 section[id] { scroll-margin-top: var(--s-6); }
 @media (max-width: 900px) { .toast-region { left: var(--s-4); right: var(--s-4); bottom: 88px; display: flex; justify-content: center; } }
 
-/* ---------- today ---------- */
 .pulse-layout { display: flex; align-items: center; gap: var(--s-5); flex-wrap: wrap; }
 .pulse-label { font-size: var(--fs-xl); margin: 2px 0 var(--s-2); }
 .driver-list, .alt-list { margin: var(--s-2) 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -511,7 +474,6 @@ section[id] { scroll-margin-top: var(--s-6); }
 .nudge, .notice { flex-wrap: wrap; }
 .notice .notice-body, .nudge > span { flex: 1 1 260px; }
 
-/* ---------- segmented control (theme) ---------- */
 .segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
 .segment {
   position: relative; display: flex; flex-direction: column; gap: 2px; min-height: var(--tap); padding: var(--s-3) var(--s-4);
@@ -527,7 +489,6 @@ section[id] { scroll-margin-top: var(--s-6); }
 .segment-hint { font-size: var(--fs-xs); color: var(--text-faint); }
 @media (max-width: 560px) { .segmented { grid-template-columns: 1fr; } }
 
-/* ---------- chart text alternative ---------- */
 figure.chart { margin: 0; }
 .chart-data { margin-top: var(--s-2); }
 .table-wrap { overflow-x: auto; max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); margin-top: var(--s-2); }
@@ -535,11 +496,11 @@ figure.chart { margin: 0; }
 .chart-data th, .chart-data td { padding: 6px var(--s-3); text-align: left; border-bottom: 1px solid var(--line); }
 .chart-data thead th { position: sticky; top: 0; background: var(--surface-2); }
 .chart-data { max-width: 100%; min-width: 0; }
-.chart-data:not([open]) > .table-wrap { display: none; } /* closed disclosures must not widen the page */
+.chart-data:not([open]) > .table-wrap { display: none; } 
 .chart-data .table-wrap { max-width: 100%; }
-/* WCAG 2.5.8: checkboxes are at least 24px on touch screens. */
+
 @media (pointer: coarse) { input[type="checkbox"]:not([role="switch"]) { width: 24px; height: 24px; } }
-/* A grid track of plain 1fr can be stretched by one wide child; minmax(0,1fr) keeps the page within the viewport. */
+
 @media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 900px) {
   .bottom-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
@@ -549,4 +510,4 @@ figure.chart { margin: 0; }
 .perm-row { grid-template-columns: minmax(0, 1fr) auto; }
 @media (max-width: 560px) { .perm-row { grid-template-columns: minmax(0, 1fr); } }
 .pill { white-space: normal; text-align: center; }
-main, dialog { overflow-wrap: break-word; } /* long words/paths/emails never force horizontal scrolling */
+main, dialog { overflow-wrap: break-word; }

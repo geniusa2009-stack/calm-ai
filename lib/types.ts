@@ -13,7 +13,6 @@ export interface CheckIn {
   note: string | null;
   mode: Mode;
   source: "manual" | "demo";
-  /** IANA zone the person was in when they checked in (null for entries made before v4). */
   tz: string | null;
 }
 
@@ -78,16 +77,13 @@ export interface Settings {
   companionEnabled: boolean;
   companionUsesContext: boolean;
   region: string; // for crisis resources
-  // Device features (app-level opt-ins only; browser permission state is never stored)
   notifyEnabled: boolean;
   wakeLockEnabled: boolean;
   hapticsEnabled: boolean;
   deviceSetup: DeviceSetup;
   deviceStep: number;
   theme: ThemePref;
-  /** IANA zone, e.g. "Africa/Cairo". "" = not set yet (UTC is used until it is). */
   timezone: string;
-  /** Push reminder categories and the local hour for the check-in reminder. */
   pushCheckin: boolean;
   pushRadar: boolean;
   reminderHour: number;

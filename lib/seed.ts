@@ -2,7 +2,6 @@ import { addCheckIn, addMemory, addSession, addCircle, saveSettings, wipeUserDat
 import type { Mode, ToolId } from "./types";
 import { addDays, localDate, resolveTimeZone, weekdayOf, zonedTimeToUtc } from "./time";
 
-/** Small deterministic PRNG so demo data is the same every time. */
 function rng(seed: number) {
   return () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -12,12 +11,6 @@ function rng(seed: number) {
 
 const clampInt = (x: number, lo = 1, hi = 10) => Math.max(lo, Math.min(hi, Math.round(x)));
 
-/**
- * Six weeks of believable, clearly-labelled demo data with real structure the
- * engine can discover: sleep → next-day stress, deadlines raise stress,
- * exercise helps, late screens cut sleep, one strain episode with a recovery,
- * and a gentle slide over the last few days for the radar to notice.
- */
 export function seedDemo(uid: UserId, mode: Mode = "work", days = 42, timezone = "UTC") {
   const tz = resolveTimeZone(timezone);
   wipeUserData(uid); // only ever called for a demo account (enforced by callers)
@@ -28,7 +21,6 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42, timezone =
   let prevLateScreens = false;
 
   for (let i = days - 1; i >= 0; i--) {
-    // Local wall-clock time on that local day, in the account's zone.
     const day = addDays(today, -i);
     let date = zonedTimeToUtc(day, 9 + Math.floor(r() * 10), Math.floor(r() * 60), tz);
     if (date > now) date = new Date(now.getTime() - 60e3); // today's entry can't be in the future
@@ -46,7 +38,6 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42, timezone =
     if (r() < 0.2) tags.push("social");
     if (episode && r() < 0.3) tags.push("conflict");
 
-    // sleep the night before; late screens the previous day cut it
     let sleep = 7.3 + (r() - 0.5) * 1.2 - (prevSleep < 6.5 ? -0.2 : 0);
     if (episode) sleep -= 1.0;
     if (slide) sleep -= 0.35 * (5 - i);
@@ -76,7 +67,6 @@ export function seedDemo(uid: UserId, mode: Mode = "work", days = 42, timezone =
     prevSleep = sleep;
     prevLateScreens = tags.includes("late-screens");
 
-    // support sessions on harder days, with realistic per-tool effectiveness
     if (stress >= 5.5 && r() < 0.85) {
       const options: [ToolId, number][] = [["breath-sigh", 2.2], ["grounding", 1.4], ["micro-reset", 0.8], ["breath-box", 1.6], ["soundscape", 1.2]];
       const [tool, eff] = options[Math.floor(r() * options.length)];

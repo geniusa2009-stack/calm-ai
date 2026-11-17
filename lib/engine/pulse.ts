@@ -37,7 +37,6 @@ export interface Pulse {
 const NAMES: Record<BMetric, string> = { stress: "Stress", mood: "Mood", energy: "Energy", sleepHours: "Sleep", focus: "Focus" };
 const fmt = (m: BMetric, v: number) => (m === "sleepHours" ? `${round(v, 1)}h` : `${round(v, 1)}`);
 
-/** Recent value per metric: EWMA over the last few days, weighting today most. */
 function recentValues(days: Day[], asOf: string) {
   const recent = days.filter((d) => { const a = daysBetween(d.date, asOf); return a >= 0 && a < 4; });
   const out = {} as Record<BMetric, number | null>;
@@ -55,14 +54,12 @@ export function strainFor(b: Baseline, values: Record<BMetric, number | null>) {
     const z = adverseZ(b, m, values[m]);
     zs[m] = z;
     if (z == null) continue;
-    // cap each contribution so one extreme number can't dominate
     s += STRAIN_WEIGHTS[m] * clamp(z, -2.5, 3.5);
     w += STRAIN_WEIGHTS[m];
   }
   return { strain: w ? s / w : 0, zs };
 }
 
-/** Daily strain series using a rolling, look-back-only baseline (no future leakage). */
 export function strainSeries(days: Day[]) {
   return [...days].sort((a, b) => (a.date < b.date ? -1 : 1)).map((d) => {
     const b = computeBaseline(days, d.date);
@@ -73,7 +70,6 @@ export function strainSeries(days: Day[]) {
 
 export function computePulse(allDays: Day[], now = new Date(), tz?: string): Pulse {
   const asOf = localDate(now, tz);
-  // Ignore anything dated after "now" (clock skew, delayed or out-of-order imports).
   const days = allDays.filter((d) => d.date <= asOf);
   const baseline = computeBaseline(days, asOf);
   const { values, n } = recentValues(days, asOf);
@@ -101,7 +97,6 @@ export function computePulse(allDays: Day[], now = new Date(), tz?: string): Pul
       return { metric: m, value: v, usual: u, z, text: `${NAMES[m]} ${fmt(m, v)} — ${dir} than your usual ${fmt(m, u)}` };
     });
 
-  // Recovering: strain recently peaked and is now clearly coming down
   const series = strainSeries(days.filter((d) => daysBetween(d.date, asOf) < 10));
   const recentPeak = Math.max(...series.filter((s) => { const a = daysBetween(s.date, asOf); return a >= 1 && a <= 7; }).map((s) => s.strain), -Infinity);
 
@@ -114,11 +109,6 @@ export function computePulse(allDays: Day[], now = new Date(), tz?: string): Pul
   else if (strain <= -0.6) state = "bright";
   else state = "steady";
 
-  // Confidence is a heuristic, not a probability. It multiplies:
-  //  - personal: how much of the baseline is the person's own data (0 → 1 by ~day 21)
-  //  - freshness: how recent the latest check-in is
-  //  - coverage: how much of the strain weighting is backed by actual metrics, and
-  //    whether the recent window has more than a single day in it
   const personal = baseline.stress.personalWeight;
   const staleness = daysBetween(last.date, asOf);
   const freshness = staleness <= 0 ? 1 : staleness === 1 ? 0.8 : staleness === 2 ? 0.6 : 0.4;

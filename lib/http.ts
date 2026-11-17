@@ -1,14 +1,6 @@
 import { AuthError, SESSION_COOKIE, userForToken, type User } from "./auth";
 import { BadRequest } from "./validate";
 
-/**
- * Every API route is built with `route()`. It enforces, in order:
- *  1. same-origin check on state-changing methods (CSRF defence alongside SameSite=Lax)
- *  2. authentication (unless `{ public: true }`), resolving the session cookie to a user
- *  3. uniform error handling that never echoes internals, request bodies or tokens
- *  4. `Cache-Control: no-store` on every response (they carry personal data)
- * tests/authz.test.ts fails the build if any route file bypasses it.
- */
 
 export interface Ctx { user: User; token: string }
 type PublicCtx = { user: User | null; token: string | null };
@@ -25,7 +17,6 @@ export function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
-/** Rate-limit key for the caller. Only trusts X-Forwarded-For behind a known proxy. */
 export function clientKey(req: Request) {
   if (process.env.CALM_TRUST_PROXY === "1") {
     const xf = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -40,7 +31,6 @@ export function sameOrigin(req: Request) {
   if (origin) {
     try { return !!host && new URL(origin).host === host; } catch { return false; }
   }
-  // Browsers always send Origin on cross-site POSTs; allow same-origin fetches that omit it.
   return req.headers.get("sec-fetch-site") === "same-origin";
 }
 
@@ -78,7 +68,6 @@ export function route(a: Handler<Ctx> | { public: true }, b?: Handler<PublicCtx>
           out.headers.set("cache-control", "no-store");
           return out;
         } catch {
-          // Response.redirect() and fetch() responses have immutable headers: copy them.
           const headers = new Headers(out.headers);
           headers.set("cache-control", "no-store");
           return new Response(out.body, { status: out.status, statusText: out.statusText, headers });
@@ -89,7 +78,6 @@ export function route(a: Handler<Ctx> | { public: true }, b?: Handler<PublicCtx>
       if (e instanceof BadRequest) return json({ error: e.message }, { status: 400 });
       if (e instanceof AuthError) return json({ error: e.message }, { status: e.status });
       if (e instanceof SyntaxError) return json({ error: "Invalid JSON" }, { status: 400 });
-      // Log the error type and message only — never request bodies, cookies or tokens.
       console.error(`[api] ${req.method} ${new URL(req.url).pathname}:`, e instanceof Error ? `${e.name}: ${e.message}` : "unknown error");
       return json({ error: "Something went wrong" }, { status: 500 });
     }

@@ -14,7 +14,6 @@ import { register, createSession, SESSION_COOKIE } from "../lib/auth";
 
 const ROOT = path.join(__dirname, "..");
 
-/** A fake Notification constructor whose permission and prompt answer we control. */
 function fakeNotification(initial: "default" | "granted" | "denied", answer?: "default" | "granted" | "denied" | "throw") {
   const calls = { request: 0, shown: [] as { title: string; body?: string }[] };
   const N = function (this: unknown, title: string, opts?: { body?: string }) {
@@ -31,7 +30,6 @@ function fakeNotification(initial: "default" | "granted" | "denied", answer?: "d
   return { env: { Notification: N, isSecureContext: true } as DeviceEnv, calls };
 }
 
-// ---------- notifications ----------
 test("reading notification state never prompts", () => {
   for (const p of ["default", "granted", "denied"] as const) {
     const { env, calls } = fakeNotification(p, "granted");
@@ -104,7 +102,6 @@ test("notifications are only shown when granted, and reminder text never contain
   }
 });
 
-// ---------- reminder policy ----------
 test("reminders: none while Calm is visible; capped per day; never repeated", () => {
   const n = [{ id: "checkin", kind: "checkin" as const }, { id: "radar:a", kind: "radar" as const }, { id: "pos:b", kind: "positive" as const }];
   assert.deepEqual(pickReminders(n, [], false), []);
@@ -113,7 +110,6 @@ test("reminders: none while Calm is visible; capped per day; never repeated", ()
   assert.deepEqual(pickReminders(n, ["checkin", "radar:a"], true), []);
 });
 
-// ---------- wake lock & vibration ----------
 test("wake lock: unsupported, acquired, and refused by the browser", async () => {
   assert.equal(wakeLockState({}), "unsupported");
   assert.deepEqual(await acquireWakeLock({}), { ok: false, reason: "unsupported" });
@@ -135,7 +131,6 @@ test("vibration: silently unavailable on devices without it (e.g. iOS Safari)", 
   assert.deepEqual(seen, [20]);
 });
 
-// ---------- reduced motion ----------
 test("reduced motion: detected from matchMedia; safe when unavailable", () => {
   assert.equal(prefersReducedMotion((q) => ({ matches: q.includes("reduce") })), true);
   assert.equal(prefersReducedMotion(() => ({ matches: false })), false);
@@ -153,7 +148,6 @@ test("reduced motion: stylesheet collapses durations and swaps movement for a fa
   assert.match(blocks, /\.skeleton::after \{ animation: none; \}/);
 });
 
-// ---------- static guarantees ----------
 function sourceFiles() {
   const out: string[] = [];
   const walk = (d: string) => {
@@ -173,7 +167,6 @@ test("only the capability module can trigger a permission prompt", () => {
     if (f.endsWith(path.join("lib", "device", "capabilities.ts"))) continue;
     assert.doesNotMatch(src, /\.requestPermission\s*\(/, `${path.relative(ROOT, f)} calls requestPermission`);
   }
-  // requestNotifications() is only invoked from click handlers in the two UI files that offer it.
   const callers = sourceFiles().filter((f) => /requestNotifications\(\)/.test(fs.readFileSync(f, "utf8"))).map((f) => path.relative(ROOT, f)).sort();
   assert.deepEqual(callers, ["app/settings/DevicePermissions.tsx", "app/setup/devices/DeviceSetup.tsx"]);
 });
@@ -185,7 +178,6 @@ test("Calm never touches location, microphone, camera or motion sensors", () => 
   }
 });
 
-// ---------- settings & nudges API ----------
 const req = (m: string, url: string, token: string, body?: unknown) => new Request("http://calm.test" + url, {
   method: m, body: body === undefined ? undefined : JSON.stringify(body),
   headers: { host: "calm.test", origin: "http://calm.test", "content-type": "application/json", cookie: `${SESSION_COOKIE}=${token}` },

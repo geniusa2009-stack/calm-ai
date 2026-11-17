@@ -6,12 +6,12 @@ Calm defines a provider-agnostic boundary for passive data. **No live wearable i
 
 | Provider | Status | What it actually does |
 |---|---|---|
-| **File import (JSON)** | ✅ Implemented | You upload readings you exported yourself, in the format below. Each reading is validated, normalised, de-duplicated and stored. |
-| **Demo wearable** | 🧪 Demo only | Deterministic synthetic sleep, resting HR and HRV. It runs **only in demo accounts**; real accounts can't see or run it (tested). |
-| Apple Health | ❌ Not implemented | HealthKit has no web API, so this needs a native iOS app that pushes to the import endpoint. |
-| Health Connect | ❌ Not implemented | Needs a native Android app. |
-| Oura / Fitbit | ❌ Not implemented | Would need OAuth2 with registered client credentials, a token store and scheduled pulls. |
-| Garmin | ❌ Not implemented | Needs Garmin Health API partner approval. |
+| **File import (JSON)** | Implemented | You upload readings you exported yourself, in the format below. Each reading is validated, normalised, de-duplicated and stored. |
+| **Demo wearable** | Demo only | Deterministic synthetic sleep, resting HR and HRV. It runs **only in demo accounts**; real accounts can't see or run it (tested). |
+| Apple Health | Not implemented | HealthKit has no web API, so this needs a native iOS app that pushes to the import endpoint. |
+| Health Connect | Not implemented | Needs a native Android app. |
+| Oura / Fitbit | Not implemented | Would need OAuth2 with registered client credentials, a token store and scheduled pulls. |
+| Garmin | Not implemented | Needs Garmin Health API partner approval. |
 
 Providers that aren't implemented have no `fetchReadings` function and show **"Not available yet"** in Settings. A test checks they can't produce data.
 

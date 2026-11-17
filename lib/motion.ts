@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 export const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 
-/** Pure check, injectable for tests. */
 export function prefersReducedMotion(mm: ((q: string) => { matches: boolean }) | undefined) {
   try { return !!mm?.(REDUCED_QUERY).matches; } catch { return false; }
 }
@@ -21,7 +20,6 @@ export function useReducedMotion() {
   return reduced;
 }
 
-/** Ease a number toward `target` (count-up). Jumps straight there under reduced motion. */
 export function useAnimatedNumber(target: number, ms = 900) {
   const reduced = useReducedMotion();
   const [value, setValue] = useState(target);

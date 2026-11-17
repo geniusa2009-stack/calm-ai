@@ -6,15 +6,6 @@ import type { IngestReport } from "../signals/types";
 import { ProviderHttpError, type OAuthProvider } from "./types";
 import { oura } from "./oura";
 
-/**
- * OAuth2 authorization-code flow with PKCE (RFC 7636) and state (RFC 6749 §10.12),
- * following RFC 9700 (OAuth 2.0 Security BCP):
- *  - state: 32 random bytes, single use, bound to the signed-in user + provider, 10 min TTL;
- *    only its SHA-256 is stored
- *  - PKCE S256 verifier: 32 random bytes, stored encrypted until the callback
- *  - exact registered redirect URI, sent again at token exchange
- *  - tokens: AES-256-GCM at rest, never sent to the browser, never logged
- */
 export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = { oura };
 
 const STATE_TTL_MS = 10 * 60e3;
@@ -28,7 +19,6 @@ export class IntegrationError extends Error {
 
 export type Availability = "available" | "blocked_by_credentials" | "token_key_missing";
 
-/** Whether this server can offer the provider at all (credentials + token key present). */
 export function availability(p: OAuthProvider): Availability {
   if (!tokenKey()) return "token_key_missing";
   if (!process.env[p.clientIdEnv] || !process.env[p.clientSecretEnv]) return "blocked_by_credentials";
@@ -45,7 +35,6 @@ const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex"
 const b64url = (b: Buffer) => b.toString("base64url");
 export const pkceChallenge = (verifier: string) => b64url(crypto.createHash("sha256").update(verifier).digest());
 
-/** Step 1: create state + PKCE verifier and return the provider's authorization URL. */
 export function beginAuthorization(uid: UserId, p: OAuthProvider, redirectUri: string, now = Date.now()) {
   if (availability(p) !== "available") throw new IntegrationError("not_configured", `${p.name} isn't configured on this server.`);
   const state = b64url(crypto.randomBytes(32));
@@ -80,7 +69,6 @@ function storeTokens(uid: UserId, p: OAuthProvider, t: TokenResponse, keepRefres
       typeof t.scope === "string" ? t.scope.slice(0, 200) : p.scopes.join(" "), new Date(now).toISOString());
 }
 
-/** Step 2: the callback. Validates state against THIS user and provider, then exchanges the code. */
 export async function completeAuthorization(uid: UserId, p: OAuthProvider, state: unknown, code: unknown, f: typeof fetch = fetch, now = Date.now()) {
   if (typeof state !== "string" || typeof code !== "string" || !state || !code || state.length > 200 || code.length > 2000) {
     throw new IntegrationError("bad_callback", "The connection response was incomplete. Please try again.");
@@ -96,7 +84,6 @@ export async function completeAuthorization(uid: UserId, p: OAuthProvider, state
   storeTokens(uid, p, await tokenRequest(p, form, f), null, now);
 }
 
-/** A valid access token, refreshed if it is about to expire. Never returned to the browser. */
 export async function accessToken(uid: UserId, p: OAuthProvider, f: typeof fetch = fetch, now = Date.now(), force = false): Promise<string> {
   const c = db().prepare("SELECT status, access_token_enc, refresh_token_enc, expires_at FROM provider_connections WHERE user_id = ? AND provider = ?").get(uid, p.id) as
     { status: string; access_token_enc: string | null; refresh_token_enc: string | null; expires_at: string | null } | undefined;
@@ -120,12 +107,10 @@ function markStatus(uid: UserId, p: OAuthProvider, status: string, code: string 
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Pull new records (paginated, retried, idempotent) and pass them through the normal validation + ingest. */
 export async function syncProvider(uid: UserId, p: OAuthProvider, opts: { f?: typeof fetch; now?: number; days?: number; backoffMs?: number } = {}): Promise<IngestReport & { pages: number; providerRejected: number }> {
   const f = opts.f ?? fetch, now = opts.now ?? Date.now(), backoff = opts.backoffMs ?? 1000;
   const last = db().prepare("SELECT last_sync_at FROM provider_connections WHERE user_id = ? AND provider = ?").get(uid, p.id) as { last_sync_at: string | null } | undefined;
   if (!last) throw new IntegrationError("not_connected", `${p.name} isn't connected.`, 404);
-  // Incremental: from 2 days before the last sync (late corrections), else the last N days.
   const since = new Date(last.last_sync_at ? Date.parse(last.last_sync_at) - 2 * 864e5 : now - (opts.days ?? 30) * 864e5);
   const until = new Date(now);
   const all: import("../signals/types").RawReading[] = [];
@@ -155,7 +140,6 @@ export async function syncProvider(uid: UserId, p: OAuthProvider, opts: { f?: ty
   return { ...report, pages, providerRejected };
 }
 
-/** Disconnect: revoke at the provider (best effort), delete tokens; optionally delete imported data. */
 export async function disconnect(uid: UserId, p: OAuthProvider, opts: { deleteData?: boolean; f?: typeof fetch } = {}) {
   const c = db().prepare("SELECT access_token_enc, refresh_token_enc FROM provider_connections WHERE user_id = ? AND provider = ?").get(uid, p.id) as
     { access_token_enc: string | null; refresh_token_enc: string | null } | undefined;
@@ -180,13 +164,11 @@ export async function disconnect(uid: UserId, p: OAuthProvider, opts: { deleteDa
   return { revoked };
 }
 
-/** Revoke every provider connection for a user (before account deletion). */
 export async function disconnectAll(uid: UserId, f: typeof fetch = fetch) {
   const rows = db().prepare("SELECT provider FROM provider_connections WHERE user_id = ?").all(uid) as { provider: string }[];
   for (const r of rows) if (OAUTH_PROVIDERS[r.provider]) await disconnect(uid, OAUTH_PROVIDERS[r.provider], { f }).catch(() => {});
 }
 
-/** Safe status for the UI: never tokens. */
 export function connectionInfo(uid: UserId) {
   return (db().prepare("SELECT provider, status, scope, connected_at, last_sync_at, last_error FROM provider_connections WHERE user_id = ?").all(uid) as
     { provider: string; status: string; scope: string | null; connected_at: string; last_sync_at: string | null; last_error: string | null }[]);

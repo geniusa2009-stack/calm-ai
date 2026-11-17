@@ -3,7 +3,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/client";
 
-/** A quiet, dismissible invitation to the optional device setup. Never requests anything itself. */
 export function SetupInvite({ resume }: { resume: boolean }) {
   const [hidden, setHidden] = useState(false);
   if (hidden) return null;

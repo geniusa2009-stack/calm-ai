@@ -10,7 +10,6 @@ import { parseTheme, themeAttr, THEME_COOKIE } from "../lib/theme";
 const ROOT = path.join(__dirname, "..");
 const css = fs.readFileSync(path.join(ROOT, "app/globals.css"), "utf8");
 
-/** The original light palette, verbatim from app/globals.css at commit 0b75295. */
 const ORIGINAL_LIGHT: Record<string, string> = {
   "--bg": "#f6f4ef", "--surface": "#fffdf9", "--surface-2": "#efece4", "--ink": "#23302c", "--ink-2": "#5a6662",
   "--ink-3": "#8a938f", "--line": "#e2ddd2", "--accent": "#3f7d6e", "--accent-ink": "#ffffff", "--accent-soft": "#dcebe5",
@@ -77,7 +76,6 @@ test("theme helpers: unknown values fall back to system; system renders no attri
   assert.equal(themeAttr("light"), "light");
 });
 
-// ---------- persistence ----------
 const req = (url: string, body: unknown, cookie = "") => new Request("http://calm.test" + url, {
   method: "POST", body: JSON.stringify(body), headers: { host: "calm.test", origin: "http://calm.test", "content-type": "application/json", cookie },
 });

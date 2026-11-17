@@ -1,7 +1,3 @@
-/**
- * Device/browser compatibility checks using Chromium device EMULATION (not physical devices).
- *   E2E_URL=http://localhost:3100 node e2e/compat.e2e.cjs     (against a production build)
- */
 const { chromium, devices } = require("playwright");
 const assert = require("node:assert/strict");
 const U = process.env.E2E_URL || "http://localhost:3100";

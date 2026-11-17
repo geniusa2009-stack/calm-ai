@@ -46,7 +46,6 @@ export const toolById = (id: string) => TOOLS.find((t) => t.id === id);
 
 export interface Efficacy { tool: ToolId; sessions: number; avgDrop: number | null; score: number; helpfulRate: number | null }
 
-/** Personal effectiveness per tool, shrunk toward a modest prior so one session can't dominate. */
 export function toolEfficacy(sessions: SupportSession[]): Record<string, Efficacy> {
   const PRIOR_DROP = 1, PRIOR_N = 2;
   const out: Record<string, Efficacy> = {};

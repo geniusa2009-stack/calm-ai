@@ -23,7 +23,6 @@ const sleep = (id: string | undefined, start: string, end: string, extra: object
 
 beforeEach(() => { useDatabase(); });
 
-// ---------- validation & normalisation ----------
 test("validation: converts units to canonical form", () => {
   const r = validateReading(sleep("a", "2026-11-04T23:00:00Z", "2026-11-05T07:00:00Z"), "p", NOW);
   assert.ok(r.ok && r.reading.value === 8 && r.reading.kind === "sleep");
@@ -56,7 +55,6 @@ test("validation: rejects malformed, implausible and impossible readings with re
   }
 });
 
-// ---------- duplicates, corrections, ordering, delays ----------
 test("ingest: re-delivery is idempotent; same id with a new value is a correction", async () => {
   const u = await register("dup@example.com", "correct horse battery");
   const batch = [sleep("n1", "2026-11-03T23:00:00Z", "2026-11-04T07:00:00Z"), sleep("n2", "2026-11-04T23:30:00Z", "2026-11-05T06:30:00Z")];
@@ -66,11 +64,9 @@ test("ingest: re-delivery is idempotent; same id with a new value is a correctio
   const fixed = ingest(u.id, "file-import", [sleep("n2", "2026-11-04T23:00:00Z", "2026-11-05T06:30:00Z")], NOW);
   assert.equal(fixed.updated, 1);
   assert.equal(listReadings(u.id, 100000).length, 2);
-  // Readings without ids are de-duplicated by content
   const anon = [{ kind: "steps", value: 4000, unit: "count", start: "2026-11-04T08:00:00Z", end: "2026-11-04T20:00:00Z" }];
   ingest(u.id, "file-import", anon, NOW);
   assert.equal(ingest(u.id, "file-import", anon, NOW).duplicates, 1);
-  // Duplicates inside one batch
   assert.equal(ingest(u.id, "file-import", [anon[0], anon[0]], NOW).duplicates, 2);
 });
 
@@ -101,7 +97,6 @@ test("ingest: batch limit and per-reading rejections are reported, valid ones st
   assert.match(big.rejected[0].reason, /batch too large/);
 });
 
-// ---------- aggregation ----------
 test("aggregation: overlapping sleep segments are never double counted", () => {
   assert.equal(unionLength([[0, 10], [5, 15], [20, 25]]), 20);
   const rs = [
@@ -118,7 +113,6 @@ test("aggregation: two providers for the same night are not summed", () => {
 });
 
 test("aggregation: device timezone decides which local day a reading belongs to", () => {
-  // 23:30 UTC on Nov 4 is 08:30 on Nov 5 in UTC+9
   assert.equal(attributionDate("2026-11-04T23:30:00Z", 540), "2026-11-05");
   assert.equal(attributionDate("2026-11-04T23:30:00Z", -300), "2026-11-04");
 });
@@ -144,7 +138,6 @@ test("merge: self-reported sleep wins; wearable sleep only fills gaps; signals n
   assert.equal(mergeSignals(groupByDay([]), new Map()).length, 0);
 });
 
-// ---------- providers & access ----------
 test("providers: registry is honest — only file import is implemented, demo is demo-only, the rest can't run", async () => {
   const byStatus = (st: string) => PROVIDERS.filter((p) => p.status === st).map((p) => p.id);
   assert.deepEqual(byStatus("implemented"), ["file-import"]);

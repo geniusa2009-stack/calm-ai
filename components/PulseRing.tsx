@@ -8,11 +8,6 @@ const COLOR: Record<PulseState, string> = {
   strained: "var(--strain)", "running-low": "var(--low)", recovering: "var(--calm)",
 };
 
-/**
- * Calm Pulse gauge. The arc and number ease to new values; colour cross-fades between
- * states. Under prefers-reduced-motion both jump straight to the final state.
- * The tick marks "your usual" (60).
- */
 export function PulseRing({ score, state, size = 200, label }: { score: number; state: PulseState; size?: number; label?: string }) {
   const r = size / 2 - 14, c = size / 2;
   const start = 135, sweep = 270;
@@ -23,7 +18,6 @@ export function PulseRing({ score, state, size = 200, label }: { score: number; 
   const [ux1, uy1] = pt(usual, r - 12), [ux2, uy2] = pt(usual, r + 12);
   const quiet = state === "learning" || state === "no-recent";
 
-  // Start from empty on first paint so the arc draws in; subsequent changes ease from the last value.
   const [target, setTarget] = useState(0);
   useEffect(() => { setTarget(quiet ? 0 : Math.max(1, score)); }, [score, quiet]);
   const shown = useAnimatedNumber(quiet ? 0 : score);

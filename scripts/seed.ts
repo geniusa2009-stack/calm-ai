@@ -1,5 +1,3 @@
-// Creates a fresh demo account and fills it with demo data. Prints its id.
-// Demo data is never written into a real account.
 import { createDemoUser } from "../lib/auth";
 import { seedDemo } from "../lib/seed";
 const u = createDemoUser();

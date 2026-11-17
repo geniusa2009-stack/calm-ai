@@ -51,7 +51,7 @@ export function MemoryClient({ memories, tz }: { memories: Memory[]; tz: string 
           {shown.map((m) => (
             <div key={m.id} className="card tight stack" style={{ gap: 6 }}>
               <div className="row between">
-                <span className="faint">{KIND_LABEL[m.kind]} · {formatInstant(m.ts, tz)}{m.source === "system" ? " · noted by Calm" : ""}{m.pinned ? " · 📌 pinned" : ""}</span>
+                <span className="faint">{KIND_LABEL[m.kind]} · {formatInstant(m.ts, tz)}{m.source === "system" ? " · noted by Calm" : ""}{m.pinned ? " · pinned" : ""}</span>
                 <div className="row" style={{ gap: 6 }}>
                   <button className="btn ghost small" onClick={() => act(() => api("/api/memories", "PATCH", { id: m.id, pinned: !m.pinned }))}>{m.pinned ? "Unpin" : "Pin"}</button>
                   <button className="btn ghost small" onClick={() => act(() => api(`/api/memories?id=${m.id}`, "DELETE"))} aria-label="Delete memory">Delete</button>

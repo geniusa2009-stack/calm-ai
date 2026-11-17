@@ -1,7 +1,3 @@
-/**
- * Timezone regression tests. Every instant is a fixed literal; nothing depends on the real
- * clock or on the machine's timezone (the whole suite is also run under several TZ values).
- */
 process.env.CALM_DB_PATH = ":memory:";
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -24,7 +20,6 @@ const ci = (id: number, ts: string, tz: string | null, stress = 5): CheckIn => (
   id, ts, tz, mood: 5, energy: 5, stress, focus: null, sleepHours: null, sleepQuality: null, tags: [], note: null, mode: "everyday", source: "manual",
 });
 
-// ---------- primitives ----------
 test("UTC vs local: the same instant is a different calendar date in different zones", () => {
   const t = "2026-11-05T22:30:00Z";
   assert.equal(localDate(t, "UTC"), "2026-11-05");
@@ -54,7 +49,6 @@ test("DST: local days can be 23 or 25 hours long", () => {
   assert.equal(dayLengthHours("2026-03-29", "Europe/London"), 23);
   assert.equal(dayLengthHours("2026-10-25", "Europe/London"), 25);
   assert.equal(dayLengthHours("2026-06-15", "Asia/Tokyo"), 24);
-  // Cairo: exactly one short and one long day in 2026, spring then autumn.
   const lengths: [string, number][] = [];
   for (let d = "2026-01-01"; d < "2027-01-01"; d = addDays(d, 1)) { const h = dayLengthHours(d, "Africa/Cairo"); if (h !== 24) lengths.push([d, h]); }
   assert.equal(lengths.length, 2, JSON.stringify(lengths));
@@ -101,14 +95,12 @@ test("zone validation: IANA ids only, canonicalised; offsets and junk rejected; 
   assert.equal(resolveTimeZone("Africa/Cairo"), "Africa/Cairo");
 });
 
-// ---------- daily aggregation ----------
 test("midnight boundary: a Cairo user's 23:30 and 08:00 check-ins are two different days", () => {
   const days = groupByDay([ci(1, "2026-11-05T21:30:00Z", "Africa/Cairo"), ci(2, "2026-11-06T06:00:00Z", "Africa/Cairo")]);
   assert.deepEqual(days.map((d) => [d.date, d.count]), [["2026-11-05", 1], ["2026-11-06", 1]]);
 });
 
 test("travel: past entries keep the day they were recorded on; legacy rows use the current zone", () => {
-  // Recorded in Cairo at 01:00 local on 6 Nov; the person now lives in New York.
   const recorded = groupByDay([ci(1, "2026-11-05T23:00:00Z", "Africa/Cairo")], "America/New_York");
   assert.equal(recorded[0].date, "2026-11-06");
   const legacy = groupByDay([ci(1, "2026-11-05T23:00:00Z", null)], "America/New_York");
@@ -131,20 +123,17 @@ test("'today' for the Pulse is the person's local date", () => {
   const cairo = computePulse(days, now, "Africa/Cairo");
   assert.equal(cairo.lastCheckIn, "2026-11-06");
   assert.notEqual(cairo.state, "no-recent");
-  // For a UTC observer 'today' is 5 Nov, so a 6 Nov entry is in the future and ignored.
   assert.equal(computePulse(days, now, "UTC").lastCheckIn, null);
 });
 
 test("evening tool ranking uses the person's local hour", () => {
   const now = new Date("2026-11-05T20:30:00Z"); // 22:30 Cairo, 15:30 New York
   const score = (tz: string, id: string) => recommend("running-low", [], "everyday", now, tz).find((r) => r.tool.id === id)!.score;
-  // Evening tools get the evening boost only where it is actually evening.
   assert.ok(score("Africa/Cairo", "wind-down") - score("America/New_York", "wind-down") >= 0.45);
   assert.equal(score("Africa/Cairo", "micro-reset"), score("America/New_York", "micro-reset"), "non-evening tools unaffected");
   assert.deepEqual(recommend("running-low", [], "everyday", now, "Africa/Cairo").slice(0, 3).map((r) => r.tool.evening), [true, true, true]);
 });
 
-// ---------- sleep & wearables ----------
 test("cross-midnight sleep belongs to the local wake-up day", () => {
   const r = validateReading({ id: "s1", kind: "sleep", value: 480, unit: "min", start: "2026-11-04T21:00:00Z", end: "2026-11-05T05:00:00Z", timeZone: "Africa/Cairo" }, "p", Date.parse("2026-11-06T00:00:00Z"));
   assert.ok(r.ok);
@@ -154,7 +143,6 @@ test("cross-midnight sleep belongs to the local wake-up day", () => {
 });
 
 test("sleep across the autumn DST change: duration is real elapsed time (9h across a 25h night)", () => {
-  // London 23:00 BST on 24 Oct → 07:00 GMT on 25 Oct = 9 hours elapsed.
   const start = zonedTimeToUtc("2026-10-24", 23, 0, "Europe/London").toISOString();
   const end = zonedTimeToUtc("2026-10-25", 7, 0, "Europe/London").toISOString();
   const nine = validateReading({ id: "dst", kind: "sleep", value: 540, unit: "min", start, end, timeZone: "Europe/London" }, "p", Date.parse("2026-10-26T00:00:00Z"));
@@ -177,7 +165,6 @@ test("missing zone information is explicit: falls back to the user's zone, never
   assert.ok(!mismatch.ok);
 });
 
-// ---------- end to end through storage ----------
 beforeEach(() => { useDatabase(); });
 
 test("storage: check-ins keep their zone; quiet hours and 'today' follow the user's zone", async () => {
@@ -186,7 +173,6 @@ test("storage: check-ins keep their zone; quiet hours and 'today' follow the use
   const ts = new Date(Date.now() - 3600e3).toISOString();
   const c = addCheckIn(u.id, { ts, tz: "Africa/Cairo", mood: 6, energy: 6, stress: 4, focus: null, sleepHours: null, sleepQuality: null, tags: [], note: null, mode: "everyday" });
   assert.equal(c.tz, "Africa/Cairo");
-  // 23:00 in Cairo (quiet) vs the same instant for a New York user (18:00, not quiet).
   const late = new Date(zonedTimeToUtc(localDate(new Date(), "Africa/Cairo"), 23, 0, "Africa/Cairo"));
   const quietIds = snapshot(u.id, late).nudges.map((n) => n.id);
   assert.deepEqual(quietIds, [], "no nudges during the person's quiet hours");

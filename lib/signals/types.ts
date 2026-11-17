@@ -1,14 +1,6 @@
-/**
- * Provider-agnostic boundary for passive signals (wearables, phone sensors, exports).
- *
- * A provider turns some source into RawReadings. Everything after that — validation,
- * unit normalisation, de-duplication, storage, daily aggregation — is shared, so a new
- * provider only has to implement `fetchReadings` (pull) or feed the import endpoint (push).
- */
 
 export type SignalKind = "sleep" | "resting_hr" | "hrv_rmssd" | "steps";
 
-/** Canonical units stored in the database. */
 export const CANONICAL_UNIT: Record<SignalKind, string> = {
   sleep: "h", // a sleep segment's duration, in hours
   resting_hr: "bpm",
@@ -16,7 +8,6 @@ export const CANONICAL_UNIT: Record<SignalKind, string> = {
   steps: "count",
 };
 
-/** Units accepted on input, with a converter to the canonical unit. */
 export const ACCEPTED_UNITS: Record<SignalKind, Record<string, (v: number) => number>> = {
   sleep: { h: (v) => v, hours: (v) => v, min: (v) => v / 60, minutes: (v) => v / 60, s: (v) => v / 3600, seconds: (v) => v / 3600 },
   resting_hr: { bpm: (v) => v, "count/min": (v) => v },
@@ -24,7 +15,6 @@ export const ACCEPTED_UNITS: Record<SignalKind, Record<string, (v: number) => nu
   steps: { count: (v) => v, steps: (v) => v },
 };
 
-/** Physiologically plausible bounds in canonical units; outside = rejected, not clamped. */
 export const PLAUSIBLE: Record<SignalKind, [number, number]> = {
   sleep: [0.05, 16],
   resting_hr: [25, 220],
@@ -32,23 +22,17 @@ export const PLAUSIBLE: Record<SignalKind, [number, number]> = {
   steps: [0, 100_000],
 };
 
-/** What a provider hands to the pipeline. Untrusted until validated. */
 export interface RawReading {
-  /** Stable id from the source, used for de-duplication. Optional: derived if absent. */
   id?: string;
   kind: string;
   value: number;
   unit: string;
-  /** ISO-8601 with offset, e.g. 2026-11-04T23:10:00+01:00 */
   start: string;
   end: string;
-  /** Device's UTC offset in minutes, so a reading is attributed to the person's local day. */
   tzOffsetMinutes?: number;
-  /** Or the device's IANA zone (preferred). Converted to the offset in force at `end` on ingest. */
   timeZone?: string;
 }
 
-/** A validated reading in canonical units. */
 export interface Reading {
   provider: string;
   externalId: string;
@@ -59,7 +43,6 @@ export interface Reading {
   tzOffsetMinutes: number | null;
 }
 
-/** implemented: works here · oauth: implemented, needs server credentials + user consent · demo · not-implemented */
 export type ProviderStatus = "implemented" | "oauth" | "demo" | "not-implemented";
 
 export interface SyncContext { userId: number; since: Date; until: Date; isDemoAccount: boolean }
@@ -69,9 +52,7 @@ export interface SignalProvider {
   name: string;
   status: ProviderStatus;
   kinds: SignalKind[];
-  /** What the user is told about this provider — must be accurate. */
   description: string;
-  /** Pull-style sync. Absent for push-only providers (e.g. file import) and unimplemented ones. */
   fetchReadings?: (ctx: SyncContext) => Promise<RawReading[]>;
 }
 

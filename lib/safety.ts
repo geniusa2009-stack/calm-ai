@@ -1,8 +1,3 @@
-/**
- * Safety layer. Calm AI is not a crisis service or a clinical tool.
- * This runs deterministically BEFORE any model call and on every note,
- * so the safety response never depends on an API key or a model.
- */
 
 const CRISIS_PATTERNS: RegExp[] = [
   /\b(kill|hurt|harm|cut)\s+(myself|me)\b/i,

@@ -3,7 +3,6 @@ import { providerById } from "./providers";
 import { ingest } from "./store";
 import { AuthError } from "../auth";
 
-/** Run a pull-style provider for one user. Refuses anything not actually implemented. */
 export async function syncProvider(user: User, providerId: string, days = 42) {
   const p = providerById(providerId);
   if (!p) throw new AuthError("Unknown provider.", 400);

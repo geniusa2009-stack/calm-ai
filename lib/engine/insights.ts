@@ -16,15 +16,12 @@ export interface Insight {
   confidence: "low" | "medium" | "high";
 }
 
-/** ISO-ish week id (YYYY-Www) so 'hide' on the weekly summary only lasts that week. */
 export function weekKey(date: string) {
-  // ISO week of a local calendar date (Thursday rule), computed on the date alone.
   const thursday = addDays(date, 3 - ((weekdayOf(date) + 6) % 7));
   const jan1 = thursday.slice(0, 4) + "-01-01";
   return `${thursday.slice(0, 4)}-W${String(Math.floor(daysBetween(jan1, thursday) / 7) + 1).padStart(2, "0")}`;
 }
 
-/** Weekly insights. User feedback (+1 fits / -1 doesn't fit) re-ranks or hides cards. */
 export function weeklyInsights(days: Day[], sessions: SupportSession[], feedback: Record<string, number>, now = new Date(), tz?: string): Insight[] {
   const asOf = localDate(now, tz);
   const out: Insight[] = [];

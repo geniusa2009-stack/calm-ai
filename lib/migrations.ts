@@ -1,17 +1,7 @@
 import type Database from "better-sqlite3";
 
-/**
- * Versioned, forward-only schema migrations.
- *
- * Rules for adding one:
- *  - append a new entry with the next version; never edit a shipped migration
- *  - each migration runs in its own transaction and is recorded in schema_migrations
- *  - prefer additive changes; for column constraints SQLite can't ALTER, use the
- *    documented rebuild pattern (create new table, copy, drop, rename)
- */
 export interface Migration { version: number; name: string; up: (db: Database.Database) => void; foreignKeysOff?: boolean }
 
-/** v1: the original single-user schema (kept verbatim so old databases and fresh ones converge). */
 const V1 = `
 CREATE TABLE IF NOT EXISTS checkins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +31,6 @@ CREATE TABLE IF NOT EXISTS insight_feedback (key TEXT PRIMARY KEY, rating INTEGE
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `;
 
-/** Tables that become user-owned in v2, with their v2 column definitions. */
 const OWNED: { table: string; cols: string; copy: string; extra?: string }[] = [
   {
     table: "checkins",
@@ -125,8 +114,6 @@ export const MIGRATIONS: Migration[] = [
         CREATE INDEX idx_login_attempts ON login_attempts(key, ts);
       `);
 
-      // Pre-existing single-user data is kept, owned by a locked legacy account that
-      // nobody can log into. An operator can reassign it with `npm run claim-legacy`.
       const hasData = OWNED.some((t) => (db.prepare(`SELECT COUNT(*) AS n FROM ${t.table}`).get() as { n: number }).n > 0);
       let legacyId: number | null = null;
       if (hasData) {
@@ -176,7 +163,6 @@ export const MIGRATIONS: Migration[] = [
   {
     version: 4,
     name: "timezones: record the IANA zone of each check-in and support session",
-    // Additive and nullable: existing rows keep NULL and are dated in the user's current zone.
     up: (db) => {
       db.exec("ALTER TABLE checkins ADD COLUMN tz TEXT;");
       db.exec("ALTER TABLE support_sessions ADD COLUMN tz TEXT;");
@@ -240,7 +226,6 @@ export function migrate(db: Database.Database) {
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)");
   const applied = new Set((db.prepare("SELECT version FROM schema_migrations").all() as { version: number }[]).map((r) => r.version));
 
-  // Databases created before the migration runner existed already have the v1 schema.
   if (!applied.size) {
     const legacy = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='checkins'").get();
     if (legacy) {
