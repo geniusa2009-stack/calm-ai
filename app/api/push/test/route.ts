@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { sendToUser, vapidConfig } from "@/lib/push/send";
 import { json, route } from "@/lib/http";
 
-/** Sends a generic test push to the caller's own devices. At most once a minute. */
 export const POST = route(async (_req, { user }) => {
   if (!vapidConfig()) return json({ error: "Push isn't configured on this server." }, { status: 503 });
   const minute = new Date().toISOString().slice(0, 16);
