@@ -32,11 +32,9 @@ export function DevicePermissions({ prefs }: { prefs: Prefs }) {
   const [busy, setBusy] = useState(false);
   const [pushOn, setPushOn] = useState<boolean | null>(null);
 
-  // Live browser state, read after mount. Reading never prompts.
   const refresh = () => { setNotif(notificationState()); setWake(wakeLockState()); setVib(vibrationState()); hasPushSubscription().then(setPushOn); };
   useEffect(() => {
     refresh();
-    // Pick up changes made in the browser's own site settings when the person comes back.
     const onVis = () => document.visibilityState === "visible" && refresh();
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
