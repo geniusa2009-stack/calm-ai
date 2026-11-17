@@ -14,7 +14,6 @@ export const POST = route(async (req, { user }) => {
     helpful, durationSec: int(b.durationSec ?? 0, "durationSec", 0, 7200)!, note: str(b.note, "note", 1000, true),
     tz: resolveTimeZone(getSettings(user.id).timezone),
   });
-  // Remember clear wins automatically, so Personal Memory reflects what actually helps.
   if (s.postStress != null && s.preStress - s.postStress >= 3 && helpful === 1) {
     addMemory(user.id, "helped", `${toolById(tool)!.name} took stress from ${s.preStress} to ${s.postStress}.`, "system");
   }
