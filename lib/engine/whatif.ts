@@ -22,10 +22,6 @@ export interface Projection {
 
 export interface WhatIfResult { ready: boolean; projections: Projection[]; basis: string[]; caveat: string }
 
-/**
- * Exploratory only. Combines the person's own learned associations additively
- * and shrinks them, so the output is a rough direction — not a forecast.
- */
 export function whatIf(days: Day[], sessions: SupportSession[], s: Scenario, now = new Date(), tz?: string): WhatIfResult {
   const caveat = "These are rough, exploratory estimates built from patterns in your own data. Associations aren't guaranteed causes, and real life is noisier.";
   if (days.length < 14) return { ready: false, projections: [], basis: [], caveat: `The lab needs about two weeks of check-ins to learn your patterns (${days.length} days so far).` };
@@ -73,7 +69,6 @@ export function whatIf(days: Day[], sessions: SupportSession[], s: Scenario, now
   if (s.dailySupport) {
     const best = Object.values(toolEfficacy(sessions)).filter((e) => e.sessions >= 2).sort((a, b) => b.score - a.score)[0];
     if (best?.avgDrop) {
-      // in-the-moment relief carries over only partially to daily averages
       const effect = -best.avgDrop * 0.2;
       delta.stress += effect;
       spread.stress += 0.3;
@@ -83,7 +78,6 @@ export function whatIf(days: Day[], sessions: SupportSession[], s: Scenario, now
 
   const projections = (["stress", "mood", "energy"] as const).map((metric) => {
     const current = mean(recent.map((d) => d[metric]));
-    // Cap the combined shift: stacking associations overstates what changing habits does.
     const projected = clamp(current + clamp(delta[metric], -2, 2), 1, 10);
     return { metric, current: round(current), projected: round(projected), low: round(clamp(projected - spread[metric], 1, 10)), high: round(clamp(projected + spread[metric], 1, 10)) };
   });
