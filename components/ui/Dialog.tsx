@@ -1,11 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
-/**
- * Accessible modal built on the native <dialog>:
- * showModal() gives a real focus trap, Esc-to-close and an inert background.
- * Focus returns to whatever opened it. Backdrop click closes.
- */
 export function Dialog({ open, onClose, title, children, variant = "dialog", describedBy }: {
   open: boolean; onClose: () => void; title: string; children: ReactNode; variant?: "dialog" | "sheet"; describedBy?: string;
 }) {
