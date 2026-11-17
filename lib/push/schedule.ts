@@ -12,13 +12,6 @@ export interface DueInput {
   sentToday: string[]; // kinds already delivered on this local date
 }
 
-/**
- * Pure scheduling rule. All times are the person's LOCAL time in their saved zone.
- *  - nothing during quiet hours; nothing if reminders are off
- *  - check-in reminder: at/after the chosen local hour, only if not checked in today
- *  - radar heads-up: once per local day when a notable shift is present
- *  - at most MAX_PER_DAY per local day; each kind at most once per local day
- */
 export function dueReminders(i: DueInput): { localDate: string; due: { kind: NudgeKind; payload: PushPayload }[] } {
   const tz = resolveTimeZone(i.settings.timezone);
   const p = localParts(i.now, tz);
