@@ -2,14 +2,12 @@ import type { PulseState } from "@/lib/engine/pulse";
 export { PulseRing } from "./PulseRing";
 
 export const STATE_COLOR: Record<PulseState, string> = {
-  // Text colours for the state label: derived from the state hues to meet 4.5:1 (the ring keeps the exact hues).
   learning: "var(--text-faint)", "no-recent": "var(--text-faint)", bright: "var(--bright-text)", steady: "var(--calm-text)", stretched: "var(--stretch-text)",
   strained: "var(--strain-text)", "running-low": "var(--low-text)", recovering: "var(--calm-text)",
 };
 
 export interface Series { label: string; color: string; values: (number | null)[]; dashed?: boolean }
 
-/** Multi-series line chart with an optional shaded "usual" band. */
 export function LineChart({ labels, series, band, min = 1, max = 10, height = 200, width = 640, ariaLabel }: {
   labels: string[]; series: Series[]; band?: { lo: number; hi: number; color: string }; min?: number; max?: number; height?: number; width?: number; ariaLabel: string;
 }) {
@@ -65,10 +63,6 @@ export function LineChart({ labels, series, band, min = 1, max = 10, height = 20
   );
 }
 
-/**
- * Plain-language description of a chart, for screen readers and the caption.
- * Descriptive only (averages, range, direction) — never an interpretation or assessment.
- */
 export function describeSeries(series: Series[], labels: string[], band?: { lo: number; hi: number }) {
   const r1 = (x: number) => Math.round(x * 10) / 10;
   const parts = series.map((s) => {
