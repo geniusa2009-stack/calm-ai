@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 
-/** Web app manifest (served at /manifest.webmanifest). Colours are the original Calm palette. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Calm",
