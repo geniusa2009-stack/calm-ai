@@ -10,7 +10,6 @@ export const metadata = { title: "Check in" };
 export default async function CheckInPage() {
   const user = await requireUser();
   const s = snapshot(user.id);
-  // Offer the person's own frequently-used tags first, then mode suggestions.
   const freq = new Map<string, number>();
   s.days.slice(-30).forEach((d) => d.tags.forEach((t) => freq.set(t, (freq.get(t) ?? 0) + 1)));
   const own = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 8);
