@@ -16,11 +16,6 @@ export interface Signal {
   evidence: string[];
 }
 
-/**
- * Early Shift Radar: looks for slow, multi-day changes relative to the
- * person's own baseline — the kind that are easy to miss day-to-day.
- * Deliberately conservative: it needs agreement across several days.
- */
 export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?: string): { signals: Signal[]; ready: boolean; note?: string } {
   const asOf = localDate(now, tz);
   const days = allDays.filter((d) => d.date <= asOf); // ignore future-dated / out-of-order data
@@ -32,9 +27,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
   const signals: Signal[] = [];
   const k = sensitivity; // >1 = more sensitive (lower thresholds)
 
-  // 1. Sustained stress elevation
-  // Needs both persistence (3+ elevated days) and magnitude (average clearly above usual);
-  // persistence alone fires ~3% of days on pure noise.
   const zStress = last5.map((d) => adverseZ(b, "stress", d.stress) ?? 0);
   const elevated = last5.filter((_, i) => zStress[i] >= 1 / k);
   if (last5.length >= 3 && elevated.length >= 3 && mean(zStress) >= 0.9 / k) {
@@ -49,10 +41,8 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     });
   }
 
-  // 2. Sleep slide
   const sleep7 = last7.map((d) => d.sleepHours).filter((x): x is number => x != null);
   if (sleep7.length >= 5) {
-    // Slope is expressed in the person's own spread so naturally variable sleepers aren't flagged more.
     const sl = slope(sleep7) / b.sleepHours.spread;
     const recent = mean(sleep7.slice(-3));
     const shortNights = sleep7.slice(-5).filter((x) => x < b.sleepHours.center - 0.5 * b.sleepHours.spread).length;
@@ -69,12 +59,10 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     }
   }
 
-  // 3. Energy falling while stress rises ("scissors")
   const last6 = within(6);
   if (last6.length >= 5) {
     const sS = slope(last6.map((d) => d.stress));
     const sE = slope(last6.map((d) => d.energy));
-    // Trends in spread units, AND both already outside usual — trends alone are mostly noise.
     const last3 = last6.slice(-3);
     const zS = mean(last3.map((d) => adverseZ(b, "stress", d.stress) ?? 0));
     const zE = mean(last3.map((d) => adverseZ(b, "energy", d.energy) ?? 0));
@@ -91,7 +79,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     }
   }
 
-  // 4. Mood volatility
   const moods = last7.map((d) => d.mood);
   if (moods.length >= 5) {
     const ratio = sd(moods) / b.mood.spread;
@@ -108,7 +95,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     }
   }
 
-  // 5. Gentle mood slide without any single bad day
   if (last5.length >= 4) {
     const m = mean(last5.map((d) => d.mood));
     const worst = Math.min(...last5.map((d) => d.mood));
@@ -125,9 +111,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     }
   }
 
-  // 6. Long-horizon drift. The short baseline (35 days) slowly absorbs a gradual
-  // change, so a slow decline can become the "new usual". Compare the last two
-  // weeks against an older anchor window to catch that.
   for (const m of ["stress", "mood", "energy"] as const) {
     const recentVals = days.filter((d) => daysBetween(d.date, asOf) < 14).map((d) => d[m]);
     const anchorVals = days.filter((d) => { const a = daysBetween(d.date, asOf); return a >= 42 && a < 120; }).map((d) => d[m]);
@@ -150,7 +133,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     }
   }
 
-  // 7. Positive signals
   const series = strainSeries(days.filter((d) => daysBetween(d.date, asOf) < 14));
   const recentS = series.filter((s) => daysBetween(s.date, asOf) < 3);
   const priorPeak = Math.max(...series.filter((s) => { const a = daysBetween(s.date, asOf); return a >= 3 && a < 12; }).map((s) => s.strain), -Infinity);
@@ -176,7 +158,6 @@ export function scanRadar(allDays: Day[], now = new Date(), sensitivity = 1, tz?
     });
   }
 
-  // 8. Check-in gap (data quality, framed softly)
   const lastDay = days.at(-1);
   if (lastDay) {
     const gap = daysBetween(lastDay.date, asOf);
