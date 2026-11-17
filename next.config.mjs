@@ -1,4 +1,3 @@
-/** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
@@ -13,7 +12,6 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
-      // The service worker must always be revalidated so fixes reach users promptly.
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Content-Type", value: "application/javascript; charset=utf-8" }] },
     ];
   },
