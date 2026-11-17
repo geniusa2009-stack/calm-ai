@@ -7,11 +7,6 @@ import type {
   Settings, SupportSession, ToolId,
 } from "./types";
 
-/**
- * Data access. ISOLATION RULE: every function that touches personal data takes
- * the owning user's id first, and every SQL statement — reads, updates AND
- * deletes-by-id — is constrained by `user_id = ?`. Never add a query without it.
- */
 export type UserId = number;
 
 const DEFAULT_SETTINGS: Settings = {
@@ -55,14 +50,12 @@ export function db(): Database.Database {
   return _db;
 }
 
-/** Test helper: swap in an isolated (usually in-memory) database. */
 export function useDatabase(file = ":memory:") {
   _db?.close();
   _db = open(file);
   return _db;
 }
 
-// ---------- check-ins ----------
 type CheckInRow = {
   id: number; ts: string; mood: number; energy: number; stress: number; focus: number | null;
   sleep_hours: number | null; sleep_quality: number | null; tags: string; note: string | null;
@@ -90,7 +83,6 @@ export function addCheckIn(uid: UserId, c: NewCheckIn, source: CheckIn["source"]
   return toCheckIn(db().prepare("SELECT * FROM checkins WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as CheckInRow);
 }
 
-/** Returns true only if a row owned by `uid` was deleted. */
 export function deleteCheckIn(uid: UserId, id: number) {
   return db().prepare("DELETE FROM checkins WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
@@ -99,7 +91,6 @@ export function normalizeTag(t: string) {
   return t.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 32);
 }
 
-// ---------- support sessions ----------
 type SessionRow = {
   id: number; ts: string; tool: string; pre_stress: number; post_stress: number | null;
   helpful: number | null; duration_sec: number; note: string | null; tz: string | null;
@@ -121,7 +112,6 @@ export function addSession(uid: UserId, s: Omit<SupportSession, "id" | "ts"> & {
   return toSession(db().prepare("SELECT * FROM support_sessions WHERE id = ? AND user_id = ?").get(info.lastInsertRowid, uid) as SessionRow);
 }
 
-// ---------- memories ----------
 type MemoryRow = { id: number; ts: string; kind: string; text: string; pinned: number; source: string };
 const toMemory = (r: MemoryRow): Memory => ({
   id: r.id, ts: r.ts, kind: r.kind as MemoryKind, text: r.text, pinned: !!r.pinned, source: r.source as Memory["source"],
@@ -145,7 +135,6 @@ export function deleteMemory(uid: UserId, id: number) {
   return db().prepare("DELETE FROM memories WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
 
-// ---------- circle ----------
 export function listCircle(uid: UserId): CircleContact[] {
   return db().prepare("SELECT id, name, relation, contact, note FROM circle WHERE user_id = ? ORDER BY id").all(uid) as CircleContact[];
 }
@@ -156,7 +145,6 @@ export function deleteCircle(uid: UserId, id: number) {
   return db().prepare("DELETE FROM circle WHERE id = ? AND user_id = ?").run(id, uid).changes > 0;
 }
 
-// ---------- companion ----------
 export function listCompanion(uid: UserId, limit = 60): CompanionMessage[] {
   const rows = db().prepare("SELECT id, ts, role, content, flagged FROM companion_messages WHERE user_id = ? ORDER BY id DESC LIMIT ?").all(uid, limit) as
     { id: number; ts: string; role: string; content: string; flagged: number }[];
@@ -170,7 +158,6 @@ export function clearCompanion(uid: UserId) {
   db().prepare("DELETE FROM companion_messages WHERE user_id = ?").run(uid);
 }
 
-// ---------- insight feedback ----------
 export function insightFeedback(uid: UserId): Record<string, number> {
   const rows = db().prepare("SELECT key, rating FROM insight_feedback WHERE user_id = ?").all(uid) as { key: string; rating: number }[];
   return Object.fromEntries(rows.map((r) => [r.key, r.rating]));
@@ -181,7 +168,6 @@ export function setInsightFeedback(uid: UserId, key: string, rating: number) {
     .run(uid, key, rating, new Date().toISOString());
 }
 
-// ---------- settings ----------
 export function getSettings(uid: UserId): Settings {
   const rows = db().prepare("SELECT key, value FROM settings WHERE user_id = ?").all(uid) as { key: string; value: string }[];
   const stored = Object.fromEntries(rows.filter((r) => r.key in DEFAULT_SETTINGS).map((r) => [r.key, JSON.parse(r.value)]));
@@ -195,10 +181,8 @@ export function saveSettings(uid: UserId, patch: Partial<Settings>) {
   })(patch);
 }
 
-// ---------- data rights ----------
 const USER_TABLES = ["checkins", "support_sessions", "memories", "circle", "companion_messages", "insight_feedback", "settings", "signal_readings", "signal_connections", "provider_connections", "oauth_states", "push_subscriptions", "push_deliveries"] as const;
 
-/** Everything Calm holds about one user. Never includes credentials or session tokens. */
 export function exportAll(uid: UserId) {
   const account = db().prepare("SELECT email, is_demo, created_at FROM users WHERE id = ?").get(uid) as
     { email: string | null; is_demo: number; created_at: string } | undefined;
@@ -216,7 +200,6 @@ export function exportAll(uid: UserId) {
   };
 }
 
-/** Delete all of one user's wellbeing data (the account itself remains). */
 export function wipeUserData(uid: UserId, keepSettings = false) {
   db().transaction(() => {
     for (const t of USER_TABLES) {
