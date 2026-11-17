@@ -4,7 +4,6 @@ import { disconnectAll } from "@/lib/integrations/oauth";
 
 export const GET = route((_req, { user }) => ({ email: user.email, demo: user.isDemo, createdAt: user.createdAt }));
 
-/** Permanently delete the account and every row it owns. Requires the password (re-authentication). */
 export const DELETE = route(async (req, { user }) => {
   const b = await req.json().catch(() => ({}));
   await deleteAccount(user.id, b.password, () => disconnectAll(user.id));
