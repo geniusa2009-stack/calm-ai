@@ -11,7 +11,6 @@ export function companionConfigured() {
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
-// Stable guardrail prompt — kept byte-identical across requests so it caches.
 const GUARDRAILS = `You are the optional companion inside Calm AI, a personal wellbeing app. Calm learns a person's own baseline from short check-ins (stress, mood, energy, sleep, tags) and notices when they drift from it.
 
 Your role: a warm, grounded presence who helps the person reflect and pick one small, practical next step. You are not a therapist, doctor, or crisis service, and you never present yourself as one.
@@ -35,7 +34,6 @@ export async function companionReply(uid: UserId, userText: string): Promise<Com
   const text = userText.trim().slice(0, 4000);
   const settings = getSettings(uid);
 
-  // 1. Deterministic safety check — always runs, before and independent of any model.
   if (detectCrisis(text)) {
     addCompanion(uid, "user", text, true);
     addCompanion(uid, "assistant", CRISIS_MESSAGE, true);
@@ -44,7 +42,6 @@ export async function companionReply(uid: UserId, userText: string): Promise<Com
 
   addCompanion(uid, "user", text);
 
-  // 2. No credentials: be explicit rather than pretending.
   if (!companionConfigured()) {
     const msg = "The AI companion isn't switched on for this installation yet — the server has no ANTHROPIC_API_KEY set. " +
       "Everything else in Calm (your pulse, radar, patterns and support tools) works without it. " +
@@ -53,7 +50,6 @@ export async function companionReply(uid: UserId, userText: string): Promise<Com
     return { content: msg, flagged: false, configured: false };
   }
 
-  // 3. Build context (only if the person allowed it in settings).
   let context = `Current mode: ${MODES[settings.mode].label}. Tone: ${MODES[settings.mode].tone}.`;
   if (settings.companionUsesContext) {
     const s = buildSummary(listCheckIns(uid, 60), listSessions(uid, 90), listMemories(uid), new Date(), resolveTimeZone(settings.timezone));
@@ -66,7 +62,6 @@ export async function companionReply(uid: UserId, userText: string): Promise<Com
   const history = listCompanion(uid, 20)
     .filter((m) => !m.flagged)
     .map((m) => ({ role: m.role, content: m.content }) as Anthropic.Beta.BetaMessageParam);
-  // The API requires the conversation to start with a user turn.
   while (history.length && history[0].role !== "user") history.shift();
 
   const client = new Anthropic();
