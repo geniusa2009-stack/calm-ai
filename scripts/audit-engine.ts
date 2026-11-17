@@ -1,4 +1,3 @@
-// Measures engine behaviour across many seeded scenarios. Run: npx tsx scripts/audit-engine.ts
 import { scenario, rolling } from "../tests/scenarios";
 import { scanRadar } from "../lib/engine/radar";
 import { computePulse } from "../lib/engine/pulse";
@@ -44,7 +43,6 @@ detection("ABRUPT +2.5 stress at day 60", (i) => (i >= 60 ? 2.5 : 0), 60);
 detection("GRADUAL +3 stress over days 30-90", (i) => (i >= 30 ? ((i - 30) / 60) * 3 : 0), 30);
 detection("GRADUAL sleep -1.5h over days 40-90", (i) => (i >= 40 ? ((i - 40) / 50) * 1.5 : 0), 40, "sleepShift");
 
-// Context false positives: random tags with no effect
 let shown = 0, med = 0, high = 0, tests = 0, sleepFP = 0, wkFP = 0;
 for (let seed = 1; seed <= SEEDS; seed++) {
   const days = scenario({ days: 60, seed, tags: (i, r) => ["a", "b", "c", "d", "e", "f"].filter(() => r() < 0.3) });
@@ -55,7 +53,6 @@ for (let seed = 1; seed <= SEEDS; seed++) {
 }
 console.log("CONTEXT null tags (per user):", { shown: shown / SEEDS, medium: med / SEEDS, high: high / SEEDS, sleepLinksShown: sleepFP / SEEDS, weekdayShown: wkFP / SEEDS });
 
-// Recovery under gaps
 const ep = scenario({ days: 60, seed: 3, stressShift: (i) => (i >= 30 && i < 36 ? 4 : 0), moodShift: (i) => (i >= 30 && i < 36 ? 3 : 0) });
 const gappy = ep.filter((d, i) => !(i >= 33 && i < 45));
 const show = (x: typeof ep) => { const r = recoveryProfile(x, []); return { episodes: r.episodes.map((e) => `${e.days}d${e.uncertain ? " (uncertain, gap " + e.maxGap + "d)" : ""}`), typical: r.typicalDays }; };
