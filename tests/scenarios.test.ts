@@ -1,8 +1,3 @@
-/**
- * Behavioural audit of the engine on reproducible synthetic scenarios.
- * Thresholds sit a margin above measured values (see scripts/audit-engine.ts).
- * These verify engineering behaviour only — they say nothing about clinical validity.
- */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { scenario, rolling } from "./scenarios";
@@ -38,14 +33,12 @@ function firstDetection(opts: Parameters<typeof scenario>[0], onset: number, n =
   return { found: found.length, median: found[Math.floor(found.length / 2)] ?? Infinity, max: found.at(-1) ?? Infinity, quick: found.filter((d) => d <= within).length };
 }
 
-// ---------- stable ----------
 test("stable: alarms on <5% of days and never 'strained' on pure noise", () => {
   const r = alarmRate({ noise: 1 });
   assert.ok(r.rate < 0.05, `alarm rate ${r.rate}`);
   assert.equal(r.strained, 0);
 });
 
-// ---------- noisy ----------
 test("noisy (2x variability): alarm rate stays <8% because thresholds scale with personal spread", () => {
   const r = alarmRate({ noise: 2 });
   assert.ok(r.rate < 0.08, `alarm rate ${r.rate}`);
@@ -72,13 +65,10 @@ test("noisy: a real tag effect is still found", () => {
   assert.ok(found >= SEEDS * 0.9, `found in ${found}/${SEEDS}`);
 });
 
-// ---------- abrupt change ----------
 test("abrupt change: +2.5 stress is caught in every seed, median ≤3 days, ≥90% within 6", () => {
   const d = firstDetection({ stressShift: (i) => (i >= 60 ? 2.5 : 0) }, 60);
   assert.equal(d.found, SEEDS);
   assert.ok(d.median <= 3, `median ${d.median}`);
-  // Known tail: a stress-ONLY shift moves composite strain little, so a few seeds take
-  // 1–2 weeks. Measured worst case 15 days. Documented in docs/ENGINE_AUDIT.md.
   assert.ok(d.quick >= SEEDS * 0.9, `within 6 days: ${d.quick}/${SEEDS}`);
   assert.ok(d.max <= 21, `max ${d.max}`);
 });
@@ -88,7 +78,6 @@ test("abrupt change: pulse reads strained within days of a broad drop", () => {
   assert.equal(computePulse(days, new Date(days.at(-1)!.date + "T20:00:00")).state, "strained");
 });
 
-// ---------- gradual change ----------
 test("gradual change: a slow +3 stress rise over 60 days is detected in ≥90% of seeds", () => {
   const d = firstDetection({ stressShift: (i) => (i >= 30 ? ((i - 30) / 60) * 3 : 0) }, 30);
   assert.ok(d.found >= SEEDS * 0.9, `found ${d.found}`);
@@ -110,7 +99,6 @@ test("gradual change: the 35-day baseline does adapt (documented behaviour, not 
   assert.ok(b.stress.center >= 6, `center ${b.stress.center}`); // has moved from ~4.5
 });
 
-// ---------- missing data ----------
 test("missing data: 40% missing days does not raise the false-alarm rate", () => {
   const r = alarmRate({ noise: 1, missingRate: 0.4 });
   assert.ok(r.rate < 0.05, `alarm rate ${r.rate}`);
@@ -155,7 +143,6 @@ test("missing data: sleep link needs ≥10 nights and survives missing sleep rep
   assert.equal(sleepLinks(days.slice(0, 12).map((d) => ({ ...d, sleepHours: null }))).length, 0);
 });
 
-// ---------- leakage & ordering ----------
 test("no leakage: the day being judged never defines its own baseline", () => {
   const today = localDate(new Date());
   for (const n of [4, 8, 30]) {
@@ -176,7 +163,6 @@ test("ordering: future-dated and unsorted days are handled", () => {
   assert.deepEqual(scanRadar([...days, future], end).signals.map((s) => s.id), scanRadar(days, end).signals.map((s) => s.id));
 });
 
-// ---------- statistics helpers ----------
 test("stats: t-distribution p-values match reference tables", () => {
   assert.ok(Math.abs(tPValue(2.228, 10) - 0.05) < 0.001);
   assert.ok(Math.abs(tPValue(1.96, 1e6) - 0.05) < 0.001);
