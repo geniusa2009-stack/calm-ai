@@ -4,10 +4,6 @@ import type { IngestReport, Reading, SignalKind } from "./types";
 
 export const MAX_BATCH = 5000;
 
-/**
- * Validate → normalise → upsert a batch. Idempotent: re-sending the same batch changes nothing.
- * Arrival order is irrelevant because daily values are always recomputed from storage.
- */
 export function ingest(uid: UserId, provider: string, raw: unknown[], now = Date.now()): IngestReport {
   const report: IngestReport = { received: raw.length, inserted: 0, updated: 0, duplicates: 0, rejected: [], latestEnd: null, maxDelayHours: null };
   if (raw.length > MAX_BATCH) {
