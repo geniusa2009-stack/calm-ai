@@ -5,14 +5,8 @@ import { median, robustSpread } from "./stats";
 export type BMetric = "stress" | "mood" | "energy" | "sleepHours" | "focus";
 export const BMETRICS: BMetric[] = ["stress", "mood", "energy", "sleepHours", "focus"];
 
-/** Adverse direction: +1 means "higher is worse". */
 export const ADVERSE: Record<BMetric, 1 | -1> = { stress: 1, mood: -1, energy: -1, sleepHours: -1, focus: -1 };
 
-/**
- * Population priors. These only matter in the first days; personal data
- * takes over via shrinkage whose prior weight itself fades to zero by day 21,
- * so an established baseline is entirely the person's own.
- */
 const PRIOR: Record<BMetric, { center: number; spread: number; floor: number }> = {
   stress: { center: 4.5, spread: 1.8, floor: 0.8 },
   mood: { center: 6, spread: 1.6, floor: 0.8 },
@@ -33,10 +27,6 @@ export function stageFor(nDays: number): Stage {
 
 const val = (d: Day, m: BMetric) => d[m] as number | null;
 
-/**
- * Baseline as of `asOf`: personal "usual", learned from a trailing window that
- * excludes the most recent days so that a current shift doesn't absorb itself.
- */
 export function computeBaseline(days: Day[], asOf: string, opts: { window?: number; exclude?: number } = {}): Baseline {
   const window = opts.window ?? 35;
   const exclude = opts.exclude ?? 3;
@@ -44,9 +34,6 @@ export function computeBaseline(days: Day[], asOf: string, opts: { window?: numb
     const age = daysBetween(d.date, asOf);
     return age >= exclude && age < window + exclude;
   });
-  // Early on there isn't enough history to hold out the recent days. Fall back to
-  // everything *before* asOf — but never asOf itself, so the day being judged can't
-  // define its own "usual". With almost no history, the population prior carries it.
   if (pool.length < 7) {
     const prior = days.filter((d) => { const age = daysBetween(d.date, asOf); return age >= 1 && age < window + exclude; });
     if (prior.length > pool.length) pool = prior;
@@ -65,7 +52,6 @@ export function computeBaseline(days: Day[], asOf: string, opts: { window?: numb
   return { ...out, days: total, stage: stageFor(total) };
 }
 
-/** Signed deviation where positive = worse than your usual, in units of your usual spread. */
 export function adverseZ(b: Baseline, m: BMetric, value: number | null) {
   if (value == null) return null;
   return (ADVERSE[m] * (value - b[m].center)) / b[m].spread;
