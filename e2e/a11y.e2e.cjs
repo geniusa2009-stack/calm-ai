@@ -1,10 +1,3 @@
-/**
- * Automated accessibility checks (axe-core, WCAG 2.0/2.1/2.2 A + AA rules) on every page,
- * light + dark, desktop + phone, plus heading/landmark structure and keyboard checks.
- * Automated checks catch roughly a third to a half of issues; they do not replace
- * screen-reader testing (see docs/accessibility-audit.md).
- *   E2E_URL=http://localhost:3100 node e2e/a11y.e2e.cjs
- */
 const { chromium, devices } = require("playwright");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -40,7 +33,6 @@ async function structure(page) {
   const b = await chromium.launch();
   const ctx = await b.newContext({ reducedMotion: "reduce" }); // audit settled UI, not mid-animation frames
   const p = await ctx.newPage();
-  // A demo account has data on every page (charts, radar, patterns), which exercises the most UI.
   await p.goto(U + "/login");
   const login = { violations: await audit(p), structure: await structure(p) };
   await p.getByRole("button", { name: "Try the demo" }).click();
@@ -57,7 +49,6 @@ async function structure(page) {
         const key = `${route} (${scheme}, ${label})`;
         report[key] = { violations: await audit(pg), structure: await structure(pg) };
       }
-      // Open dialogs are part of the UI too.
       await pg.goto(U + "/settings");
       await pg.getByRole("button", { name: "Delete all my wellbeing data…" }).click();
       await pg.getByRole("dialog").waitFor();
@@ -65,7 +56,6 @@ async function structure(page) {
       await c.close();
     }
   }
-  // Keyboard: skip link, visible focus, no trap across Today.
   const k = await b.newContext({ storageState: state });
   const kp = await k.newPage();
   await kp.goto(U + "/");
