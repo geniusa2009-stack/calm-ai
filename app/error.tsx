@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 
-/** Friendly recovery screen for unexpected errors. No technical details are shown or logged here. */
 export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <EmptyState icon="!" title="Something didn't load"
