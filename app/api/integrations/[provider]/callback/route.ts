@@ -4,10 +4,6 @@ import { route } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Provider redirects back here. The session cookie (SameSite=Lax) is sent on this top-level
- * navigation; state must match THIS user. Errors are reported by code only.
- */
 export const GET = route(async (req, { user }) => {
   const url = new URL(req.url);
   const p = providerOr404(providerFromPath(req));
