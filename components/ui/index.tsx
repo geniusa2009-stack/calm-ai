@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-/** Consistent page header used by every screen. */
 export function PageHeader({ eyebrow, title, lead, actions }: { eyebrow?: string; title: ReactNode; lead?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="page-head">
@@ -27,7 +26,6 @@ export function EmptyState({ icon = "◌", title, children, action }: { icon?: R
 
 export type Tone = "info" | "success" | "warn" | "error";
 
-/** Inline feedback. Errors are announced assertively, everything else politely. */
 export function Notice({ tone = "info", title, children, action }: { tone?: Tone; title?: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className={`notice ${tone}`} role={tone === "error" ? "alert" : "status"}>
