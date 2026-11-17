@@ -1,7 +1,3 @@
-/**
- * Theme checks: Light / Dark / System, switching without reload, no flash, persistence.
- *   E2E_URL=http://localhost:3100 node e2e/theme.e2e.cjs
- */
 const { chromium, devices } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -125,7 +121,6 @@ const attr = (p) => p.evaluate(() => document.documentElement.getAttribute("data
     await rm.close();
   });
 
-  // Screenshots: every page, both themes, phone + desktop. Also checks no page errors / overflow.
   const pages = ["/", "/check-in", "/support", "/support/breath-box", "/patterns", "/memory", "/lab", "/companion", "/circle", "/settings", "/setup/devices"];
   for (const theme of ["light", "dark"]) {
     for (const [label, opts] of [["mobile", devices["iPhone 13"]], ["desktop", { viewport: { width: 1280, height: 900 } }]]) {
