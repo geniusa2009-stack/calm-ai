@@ -7,11 +7,6 @@ import { scanRadar } from "./engine/radar";
 import { mean, round } from "./engine/stats";
 import type { CheckIn, Memory, SupportSession } from "./types";
 
-/**
- * Plain-language summary of the person's recent wellbeing data.
- * Used for (a) the Professional Bridge export a person may choose to share
- * and (b) context for the optional AI companion. Never includes contacts.
- */
 export function buildSummary(checkins: CheckIn[], sessions: SupportSession[], memories: Memory[], now = new Date(), tz = "UTC") {
   const days = groupByDay(checkins, tz);
   const asOf = localDate(now, tz);
