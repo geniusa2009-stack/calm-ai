@@ -2,10 +2,6 @@ import webpush from "web-push";
 import { db, type UserId } from "../db";
 import { subscriptionsFor } from "./store";
 
-/**
- * Server-side Web Push delivery (VAPID, RFC 8292; payload encryption RFC 8291 via `web-push`).
- * Keys live in server env only: CALM_VAPID_PUBLIC_KEY, CALM_VAPID_PRIVATE_KEY, CALM_VAPID_SUBJECT.
- */
 export const MAX_FAILURES = 5;
 
 export function vapidConfig() {
@@ -20,7 +16,6 @@ const defaultSender: Sender = (sub, payload, opts) => webpush.sendNotification(s
 
 export interface DeliveryResult { sent: number; removed: number; failed: number }
 
-/** Send to all of a user's subscriptions; prune gone (404/410) and repeatedly failing ones. */
 export async function sendToUser(uid: UserId, payload: PushPayload, send: Sender = defaultSender): Promise<DeliveryResult> {
   const v = vapidConfig();
   if (!v) return { sent: 0, removed: 0, failed: 0 };
@@ -40,7 +35,6 @@ export async function sendToUser(uid: UserId, payload: PushPayload, send: Sender
       } else {
         db().prepare("UPDATE push_subscriptions SET failures = failures + 1 WHERE id = ?").run(s.id); res.failed++;
       }
-      // Log status only — never the endpoint (a capability URL) or payload.
       console.error(`[push] delivery failed: ${code ?? "network"}`);
     }
   }
