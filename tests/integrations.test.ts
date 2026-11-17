@@ -1,8 +1,3 @@
-/**
- * OAuth integration framework + Oura adapter, against an in-process MOCK provider.
- * These tests prove our side of the protocol; they do not prove Oura's real API matches
- * (see docs/wearable-integrations.md: "Implemented but not externally verified").
- */
 process.env.CALM_DB_PATH = ":memory:";
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -22,7 +17,6 @@ function configure(on = true) {
   else { delete process.env.CALM_TOKEN_KEY; delete process.env.OURA_CLIENT_ID; delete process.env.OURA_CLIENT_SECRET; }
 }
 
-/** Mock provider. Records every request; behaviour is scripted per test. */
 function mockProvider(opts: { pages?: unknown[][]; script?: (url: string, n: number) => Response | null } = {}) {
   const calls: { url: string; body: URLSearchParams | null; auth: string | null }[] = [];
   let access = 0, apiHits = 0;
@@ -64,7 +58,6 @@ async function connected(email = "o@example.com", pages?: unknown[][]) {
 
 beforeEach(() => { useDatabase(); configure(true); });
 
-// ---------- configuration ----------
 test("availability: blocked without credentials or without the token encryption key", () => {
   configure(false);
   assert.equal(availability(oura), "token_key_missing");
@@ -83,7 +76,6 @@ test("secrets: AES-256-GCM round trip; tampering and wrong keys are rejected", (
   assert.throws(() => decryptSecret(blob, crypto.randomBytes(32)));
 });
 
-// ---------- authorization ----------
 test("authorize URL: minimal scope, exact redirect, state, PKCE S256; state stored only as a hash", async () => {
   const u = await register("a@example.com", "correct horse battery");
   const { url, state } = beginAuthorization(u.id, oura, "https://calm.test/api/integrations/oura/callback", NOW);
@@ -132,7 +124,6 @@ test("state is single-use, bound to the user and provider, and expires", async (
   assert.equal(connectionInfo(b.id).length, 0, "user B gained nothing");
 });
 
-// ---------- token lifecycle ----------
 test("refresh: expiring tokens are refreshed; rotated refresh tokens replace old ones; un-rotated ones are kept", async () => {
   const { u, m } = await connected();
   assert.equal(await accessToken(u.id, oura, m.f, NOW + 3600e3), "at-2"); // expired → refresh
@@ -152,7 +143,6 @@ test("refresh rejected → reconnect required (no silent failure)", async () => 
   assert.equal(connectionInfo(u.id)[0].status, "reauth_required");
 });
 
-// ---------- sync ----------
 test("sync: paginates, normalises, preserves provenance, and is idempotent", async () => {
   const pages = [[sleepRow("s1", "2026-11-01"), sleepRow("s2", "2026-11-02")], [sleepRow("s3", "2026-11-03"), { id: "bad" }]];
   const { u, m } = await connected("p@example.com", pages);
@@ -190,7 +180,6 @@ test("sync: 429 with Retry-After is retried; 401 triggers one refresh; persisten
   assert.match(connectionInfo(u2.id)[0].last_error!, /^http_503$/, "error stored as a code, not a payload");
 });
 
-// ---------- disconnect, deletion, isolation ----------
 test("disconnect: revokes at the provider, deletes tokens; optional data deletion; other users untouched", async () => {
   const { u: a } = await connected("da@example.com", [[sleepRow("s1", "2026-11-01")]]);
   const { u: b } = await connected("db@example.com", [[sleepRow("s1", "2026-11-01")]]);
@@ -246,7 +235,6 @@ test("callback route: another user's state is refused and reported by code only"
   assert.equal(connectionInfo(b.id).length + connectionInfo(a.id).length, 0);
 });
 
-// ---------- normalisation ----------
 test("Oura normalisation: offsets kept, units explicit, missing values not invented", () => {
   const n = normaliseOuraSleep(sleepRow("x", "2026-11-01"));
   assert.equal(n.rejected, false);
