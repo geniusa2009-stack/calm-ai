@@ -3,13 +3,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, detectedTimeZone } from "@/lib/client";
 
-/**
- * Timezone rule (docs/timezone-architecture.md):
- *  - If the account has NO zone yet, adopt the browser's zone automatically (initial set).
- *  - If it has one and the device reports a different one (e.g. travel), ASK — never change
- *    it silently. "Keep" is remembered for that detected zone on this device only.
- * Past entries never move either way: each one keeps the zone it was recorded in.
- */
 export function TimezoneSync({ saved }: { saved: string }) {
   const router = useRouter();
   const [detected, setDetected] = useState<string | null>(null);
