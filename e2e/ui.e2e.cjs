@@ -1,13 +1,3 @@
-/**
- * Browser checks for the UI, motion and device-permission flows.
- *
- *   npm run build && npm start -- -p 3100      (in another terminal, against a scratch DB)
- *   E2E_URL=http://localhost:3100 npm run e2e
- *
- * Uses the Playwright + Chromium available on the machine (not a project dependency).
- * Browser permission APIs are replaced with instrumented fakes *before any page script runs*,
- * so the tests can prove that nothing prompts on load and drive every outcome.
- */
 const { chromium, devices } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -18,12 +8,10 @@ const OUT = process.env.E2E_OUT || path.join(require("node:os").tmpdir(), "calm-
 fs.mkdirSync(OUT, { recursive: true });
 const PAGES = ["/", "/check-in", "/support", "/support/breath-box", "/patterns", "/memory", "/lab", "/companion", "/circle", "/settings", "/setup/devices"];
 
-/** Fake Notification / wakeLock / vibrate with call counters. `answer` is what the prompt returns. */
 function instrument({ initial = "default", answer = "granted", unsupported = false }) {
   window.__calls = { request: 0, wake: 0, vibrate: 0, shown: 0 };
   if (unsupported) { try { delete window.Notification; } catch {} window.Notification = undefined; }
   else {
-    // Persist the decision across page loads, as a real browser does (per origin).
     const K = "__e2e_perm", C = "__e2e_calls";
     const saved = JSON.parse(localStorage.getItem(C) || "null");
     if (saved) window.__calls = saved;
@@ -71,7 +59,6 @@ async function onboardAndCheckIn(page) {
   const browser = await chromium.launch();
   console.log("Calm UI e2e against", U);
 
-  // ---------- 1. No permission request before explicit action ----------
   const A = await newUser(browser, { answer: "granted" });
   await check("onboarding → first check-in works", () => onboardAndCheckIn(A.page));
   await check("no permission prompt, wake lock or vibration on load of any page", async () => {
@@ -84,7 +71,6 @@ async function onboardAndCheckIn(page) {
     assert.equal((await calls(A.page)).request, 0);
   });
 
-  // ---------- 2. Granted path through the guided flow ----------
   await check("granted: prompt appears only after tapping Enable, result is shown", async () => {
     const p = A.page;
     await p.goto(U + "/setup/devices");
@@ -138,7 +124,6 @@ async function onboardAndCheckIn(page) {
     await p.getByRole("link", { name: "Back to today" }).waitFor();
   });
 
-  // ---------- 3. Denied ----------
   const D = await newUser(browser, { answer: "denied" });
   await onboardAndCheckIn(D.page);
   await check("denied: explains calmly, never re-prompts, app stays usable", async () => {
@@ -160,7 +145,6 @@ async function onboardAndCheckIn(page) {
     await p.getByRole("button", { name: "Save check-in" }).waitFor();
   });
 
-  // ---------- 4. Dismissed ----------
   const X = await newUser(browser, { answer: "default" });
   await onboardAndCheckIn(X.page);
   await check("dismissed: treated as no decision; can try again later from Settings", async () => {
@@ -174,7 +158,6 @@ async function onboardAndCheckIn(page) {
     assert.equal(await p.getByRole("switch", { name: "Reminders" }).isDisabled(), false);
   });
 
-  // ---------- 5. Unsupported ----------
   const N = await newUser(browser, { unsupported: true });
   await onboardAndCheckIn(N.page);
   await check("unsupported: labelled clearly, no Enable button, setup continues", async () => {
@@ -187,7 +170,6 @@ async function onboardAndCheckIn(page) {
     await p.getByRole("heading", { name: "Keep the screen on during sessions" }).waitFor();
   });
 
-  // ---------- 6. Skip, resume, revisit ----------
   const S = await newUser(browser, {});
   await onboardAndCheckIn(S.page);
   await check("resumable: progress survives a reload", async () => {
@@ -215,7 +197,6 @@ async function onboardAndCheckIn(page) {
     assert.equal((await calls(p)).request, 0);
   });
 
-  // ---------- 7. Dialog keyboard behaviour ----------
   await check("dialog: focus moves in, Escape closes, focus returns to opener; nothing deleted", async () => {
     const p = S.page;
     await p.goto(U + "/settings");
@@ -231,7 +212,6 @@ async function onboardAndCheckIn(page) {
     assert.equal(data.checkins.length, 1);
   });
 
-  // ---------- 8. Reduced motion ----------
   await check("reduced motion: entrance animations collapse to ~1ms fades", async () => {
     const rm = await browser.newContext({ reducedMotion: "reduce" });
     const p = await rm.newPage();
@@ -246,7 +226,6 @@ async function onboardAndCheckIn(page) {
     await rm.close(); await normal.close();
   });
 
-  // ---------- 9. Auth still enforced ----------
   await check("auth: signed-out visitors are redirected and APIs refuse", async () => {
     const c = await browser.newContext(); const p = await c.newPage();
     await p.goto(U + "/settings"); assert.match(p.url(), /\/login$/);
@@ -254,7 +233,6 @@ async function onboardAndCheckIn(page) {
     await c.close();
   });
 
-  // ---------- 10. Responsive: every page at phone, tablet and desktop ----------
   const T = await newUser(browser, {}, {});
   await onboardAndCheckIn(T.page);
   for (const [label, opts] of [["mobile", devices["iPhone 13"]], ["tablet", { viewport: { width: 820, height: 1180 } }], ["desktop", { viewport: { width: 1280, height: 900 } }]]) {
